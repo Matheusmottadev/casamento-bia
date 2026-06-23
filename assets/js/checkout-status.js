@@ -1,6 +1,10 @@
 const statusCopy = document.querySelector("#checkout-status-copy");
 const statusSummary = document.querySelector("#checkout-status-summary");
-const sessionId = new URLSearchParams(window.location.search).get("session_id");
+const searchParams = new URLSearchParams(window.location.search);
+const paymentIntentId =
+  searchParams.get("payment_intent") ||
+  searchParams.get("payment_intent_id") ||
+  searchParams.get("pi");
 
 function formatCurrencyFromCents(amountInCents, currency = "brl") {
   return new Intl.NumberFormat("pt-BR", {
@@ -12,13 +16,13 @@ function formatCurrencyFromCents(amountInCents, currency = "brl") {
 async function loadCheckoutStatus() {
   if (!statusCopy || !statusSummary) return;
 
-  if (!sessionId) {
+  if (!paymentIntentId) {
     statusCopy.textContent = "Nao encontramos o identificador da sua compra.";
     return;
   }
 
   try {
-    const response = await fetch(`/api/checkout-session?session_id=${encodeURIComponent(sessionId)}`);
+    const response = await fetch(`/api/payment-intent-status?payment_intent=${encodeURIComponent(paymentIntentId)}`);
     const data = await response.json();
 
     if (!response.ok) {
@@ -29,10 +33,10 @@ async function loadCheckoutStatus() {
     statusSummary.innerHTML = `
       <p><strong>Presente:</strong> ${data.giftTitle}</p>
       <p><strong>Valor:</strong> ${formatCurrencyFromCents(data.amountTotal, data.currency)}</p>
-      <p><strong>Status:</strong> ${data.paymentStatus === "paid" ? "Pago" : data.paymentStatus}</p>
+      <p><strong>Status:</strong> ${data.paymentStatus === "succeeded" ? "Pago" : data.paymentStatus}</p>
     `;
   } catch (error) {
-    console.error("Nao foi possivel carregar os detalhes da sessao.", error);
+    console.error("Nao foi possivel carregar os detalhes do pagamento.", error);
     statusCopy.textContent = "Seu pagamento pode ter sido concluido, mas nao conseguimos carregar os detalhes agora.";
   }
 }

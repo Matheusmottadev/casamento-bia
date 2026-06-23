@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pagamento | Kaique & Beatriz</title>
+    <link href="https://fonts.icasei.com.br/fonts.css?use=Recoleta-Light" rel="stylesheet" />
+    <link href="https://fonts.icasei.com.br/fonts.css?use=Radon-Regular" rel="stylesheet" />
+    <link href="https://fonts.icasei.com.br/fonts.css?use=trajanPro" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body>
+    <main class="status-page">
+      <section class="status-card payment-page">
+        <p class="status-card__eyebrow">Pagamento seguro</p>
+        <h1 class="status-card__title">Fechar presente</h1>
+        <p class="status-card__copy" id="payment-copy">Estamos preparando seu pagamento.</p>
+        <div class="status-card__summary" id="payment-summary"></div>
+        <form class="payment-form" id="payment-form" novalidate>
+          <div id="payment-element"></div>
+          <p class="gift-modal__feedback payment-form__feedback" id="payment-feedback" aria-live="polite"></p>
+          <button class="ghost-button ghost-button--solid payment-form__submit" id="payment-submit" type="submit">Pagar agora</button>
+        </form>
+        <div class="status-card__actions">
+          <a class="ghost-button" href="./presentes.html">Voltar para os presentes</a>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="./assets/js/pagamento.js"></script>
+  </body>
+</html>

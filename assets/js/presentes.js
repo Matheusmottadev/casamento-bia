@@ -221,6 +221,7 @@ if (purchaseGrid && reservationGrid) {
     selectedGiftPrice: "",
     selectedGiftAmount: "",
   };
+  const pendingPurchaseStorageKey = "casamento-bia-pending-purchase";
 
   function escapeHtml(value) {
     return String(value)
@@ -499,6 +500,10 @@ if (purchaseGrid && reservationGrid) {
     }).format(amount);
   }
 
+  function persistPendingPurchase(payload) {
+    window.sessionStorage.setItem(pendingPurchaseStorageKey, JSON.stringify(payload));
+  }
+
   async function submitPurchaseCheckout(event) {
     event.preventDefault();
 
@@ -531,31 +536,20 @@ if (purchaseGrid && reservationGrid) {
     }
 
     try {
-      purchaseCheckoutFeedback.textContent = "Redirecionando para o pagamento...";
+      purchaseCheckoutFeedback.textContent = "Preparando pagamento...";
 
-      const response = await fetch("/api/purchase-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          giftTitle: purchaseState.selectedGiftTitle,
-          priceLabel: purchaseState.selectedGiftPrice,
-          amount: purchaseState.selectedGiftAmount,
-          firstName,
-          lastName,
-          paymentMethod,
-          phone,
-        }),
+      persistPendingPurchase({
+        giftTitle: purchaseState.selectedGiftTitle,
+        priceLabel: purchaseState.selectedGiftPrice,
+        amount: purchaseState.selectedGiftAmount,
+        firstName,
+        lastName,
+        paymentMethod,
+        phone,
       });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.url) {
-        throw new Error(data.error || `HTTP ${response.status}`);
-      }
-
-      window.location.href = data.url;
+      window.location.href = "./pagamento.html";
     } catch (error) {
-      console.error("Nao foi possivel iniciar o checkout do Stripe.", error);
+      console.error("Nao foi possivel preparar o checkout.", error);
       purchaseCheckoutFeedback.textContent = "Nao foi possivel iniciar o pagamento agora.";
     }
   }
