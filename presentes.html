@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Presentes | Kaique & Beatriz</title>
+    <meta
+      name="description"
+      content="Lista de presentes divertida do casamento de Kaique e Beatriz."
+    />
+    <link href="https://fonts.icasei.com.br/fonts.css?use=Recoleta-Light" rel="stylesheet" />
+    <link href="https://fonts.icasei.com.br/fonts.css?use=Radon-Regular" rel="stylesheet" />
+    <link href="https://fonts.icasei.com.br/fonts.css?use=trajanPro" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header site-header--solid">
+        <a class="brand" href="./index.html#top" aria-label="Voltar ao início">K <span>&</span> B</a>
+
+        <nav class="desktop-nav" aria-label="Navegação principal">
+          <div class="desktop-nav__group">
+            <button class="desktop-nav__item desktop-nav__item--caret desktop-nav__trigger" type="button" aria-expanded="false">
+              Páginas
+            </button>
+            <div class="desktop-nav__submenu" aria-label="Seções do site">
+              <a href="./index.html#paginas">Início</a>
+              <a href="./index.html#historia-detalhes">Nossa história</a>
+              <a href="./index.html#mensagens">Mensagens</a>
+            </div>
+          </div>
+          <a class="desktop-nav__item" href="./presentes.html">Presentes</a>
+          <button class="desktop-nav__item desktop-nav__action" type="button" data-open-rsvp="true">Confirmar presença</button>
+        </nav>
+
+        <button
+          class="menu-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+          aria-label="Abrir menu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </header>
+
+      <nav class="mobile-menu" id="mobile-menu" aria-label="Menu mobile" hidden>
+        <a href="./index.html#paginas">Página inicial</a>
+        <a href="./index.html#historia-detalhes">Nossa história</a>
+        <a href="./index.html#mensagens">Mensagens</a>
+        <a href="./presentes.html">Presentes de casamento</a>
+        <button class="mobile-menu__action" type="button" data-open-rsvp="true">Confirmar presença</button>
+      </nav>
+
+      <main class="gifts-page" id="presentes">
+        <div class="gifts-shell">
+          <div class="gifts-section__intro">
+            <h1>Presentes</h1>
+            <p>
+              Separamos uma mistura de presentes engraçados para comprar no site e itens reais para quem quiser presentear a casa diretamente.
+            </p>
+          </div>
+
+          <div class="gifts-switcher" id="gifts-switcher" aria-label="Modo da lista de presentes">
+            <button class="gifts-switcher__button gifts-switcher__button--active" id="purchase-tab" type="button" data-gifts-view="purchase" aria-pressed="true">
+              Comprar aqui
+            </button>
+            <button class="gifts-switcher__button" id="reservation-tab" type="button" data-gifts-view="reservation" aria-pressed="false">
+              Se dispor
+            </button>
+          </div>
+
+          <div class="gifts-stage" id="gifts-stage">
+            <section class="gifts-section gifts-panel gifts-panel--active" id="purchase-panel" aria-hidden="false">
+              <section class="gifts-grid" id="purchase-gifts-grid" aria-label="Presentes para compra online"></section>
+            </section>
+
+            <section class="gifts-section gifts-panel" id="reservation-panel" aria-hidden="true">
+              <section class="gifts-grid gifts-grid--home" id="reservation-gifts-grid" aria-label="Presentes para reserva"></section>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div class="gift-modal" id="gift-modal" hidden>
+      <div class="gift-modal__backdrop" data-close-modal="true"></div>
+      <div class="gift-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="gift-modal-title">
+        <button class="gift-modal__close" id="gift-modal-close" type="button" aria-label="Fechar">×</button>
+        <p class="gift-modal__eyebrow">Reserva de presente</p>
+        <h2 class="gift-modal__title" id="gift-modal-title">Confirmar presente</h2>
+        <p class="gift-modal__copy" id="gift-modal-copy"></p>
+
+        <form class="gift-modal__form" id="gift-reservation-form" novalidate>
+          <label class="gift-modal__field">
+            <span>Seu nome</span>
+            <input id="gift-reserver-name" name="name" type="text" maxlength="80" placeholder="Digite seu nome" required />
+          </label>
+
+          <label class="gift-modal__field">
+            <span>WhatsApp ou contato</span>
+            <input id="gift-reserver-contact" name="contact" type="text" maxlength="120" placeholder="Opcional, mas ajuda bastante" />
+          </label>
+
+          <p class="gift-modal__feedback" id="gift-modal-feedback" aria-live="polite"></p>
+          <button class="ghost-button ghost-button--solid gift-modal__submit" type="submit">Confirmar que eu vou dar</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="gift-modal" id="custom-purchase-modal" hidden>
+      <div class="gift-modal__backdrop" data-close-custom-purchase="true"></div>
+      <div class="gift-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="custom-purchase-title">
+        <button class="gift-modal__close" id="custom-purchase-close" type="button" aria-label="Fechar">×</button>
+        <p class="gift-modal__eyebrow">Presente personalizado</p>
+        <h2 class="gift-modal__title" id="custom-purchase-title">Monte seu presente</h2>
+        <p class="gift-modal__copy" id="custom-purchase-copy">Escolha o nome e o valor do presente para seguir com a mensagem personalizada.</p>
+
+        <form class="gift-modal__form" id="custom-purchase-form" novalidate>
+          <label class="gift-modal__field">
+            <span>Nome do presente</span>
+            <input id="custom-purchase-name" name="title" type="text" maxlength="100" placeholder="Ex.: Jogo de taças, ajuda na geladeira..." required />
+          </label>
+
+          <label class="gift-modal__field">
+            <span>Valor</span>
+            <input id="custom-purchase-value" name="amount" type="text" inputmode="decimal" maxlength="20" placeholder="Ex.: 250,00" required />
+          </label>
+
+          <p class="gift-modal__feedback" id="custom-purchase-feedback" aria-live="polite"></p>
+          <button class="ghost-button ghost-button--solid gift-modal__submit" type="submit">Continuar com esse presente</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="gift-modal" id="purchase-checkout-modal" hidden>
+      <div class="gift-modal__backdrop" data-close-purchase-checkout="true"></div>
+      <div class="gift-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="purchase-checkout-title">
+        <button class="gift-modal__close" id="purchase-checkout-close" type="button" aria-label="Fechar">×</button>
+        <p class="gift-modal__eyebrow">Fechar compra</p>
+        <h2 class="gift-modal__title" id="purchase-checkout-title">Concluir presente</h2>
+        <p class="gift-modal__copy" id="purchase-checkout-copy"></p>
+
+        <form class="gift-modal__form" id="purchase-checkout-form" novalidate>
+          <label class="gift-modal__field">
+            <span>Nome</span>
+            <input id="purchase-first-name" name="firstName" type="text" maxlength="80" placeholder="Digite seu nome" required />
+          </label>
+
+          <label class="gift-modal__field">
+            <span>Sobrenome</span>
+            <input id="purchase-last-name" name="lastName" type="text" maxlength="80" placeholder="Digite seu sobrenome" required />
+          </label>
+
+          <label class="gift-modal__field">
+            <span>Forma de pagamento</span>
+            <select id="purchase-payment-method" name="paymentMethod" required>
+              <option value="">Selecione</option>
+              <option value="Cartão de crédito">Cartão de crédito</option>
+              <option value="Cartão de débito">Cartão de débito</option>
+            </select>
+          </label>
+
+          <label class="gift-modal__field">
+            <span>Número de telefone</span>
+            <input id="purchase-phone" name="phone" type="tel" maxlength="40" placeholder="Seu WhatsApp ou telefone" required />
+          </label>
+
+          <p class="gift-modal__feedback" id="purchase-checkout-feedback" aria-live="polite"></p>
+          <button class="ghost-button ghost-button--solid gift-modal__submit" type="submit">Concluir</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="gift-toast" id="gift-toast" hidden aria-live="polite"></div>
+
+    <div class="rsvp-modal" id="rsvp-modal" hidden>
+      <div class="rsvp-modal__backdrop" data-close-rsvp="true"></div>
+      <div class="rsvp-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="rsvp-modal-title">
+        <button class="rsvp-modal__close" id="rsvp-modal-close" type="button" aria-label="Fechar">×</button>
+        <p class="rsvp-modal__eyebrow">Confirmar presença</p>
+        <h2 class="rsvp-modal__title" id="rsvp-modal-title">Vamos te esperar nesse dia especial?</h2>
+        <p class="rsvp-modal__copy">Preenche seus dados rapidinho para a gente organizar tudo com carinho.</p>
+
+        <form class="rsvp-modal__form" id="rsvp-form" novalidate>
+          <label class="rsvp-modal__field">
+            <span>Nome</span>
+            <input id="rsvp-first-name" name="firstName" type="text" maxlength="80" placeholder="Digite seu nome" required />
+          </label>
+
+          <label class="rsvp-modal__field">
+            <span>Sobrenome</span>
+            <input id="rsvp-last-name" name="lastName" type="text" maxlength="80" placeholder="Digite seu sobrenome" required />
+          </label>
+
+          <label class="rsvp-modal__field">
+            <span>Número</span>
+            <input id="rsvp-phone" name="phone" type="tel" maxlength="40" placeholder="Seu WhatsApp ou telefone" required />
+          </label>
+
+          <p class="rsvp-modal__feedback" id="rsvp-feedback" aria-live="polite"></p>
+          <button class="ghost-button ghost-button--solid rsvp-modal__submit" type="submit">Confirmar presença</button>
+        </form>
+      </div>
+    </div>
+
+    <script src="./assets/js/main.js"></script>
+    <script src="./assets/js/presentes.js"></script>
+  </body>
+</html>

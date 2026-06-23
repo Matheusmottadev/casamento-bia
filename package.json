@@ -1,0 +1,15 @@
+{
+  "name": "casamento-bia",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "build": "vite build",
+    "preview": "vite preview",
+    "dev:vite": "vite"
+  },
+  "devDependencies": {
+    "vite": "^7.1.3"
+  }
+}
