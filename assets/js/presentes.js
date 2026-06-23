@@ -219,6 +219,7 @@ if (purchaseGrid && reservationGrid) {
   const purchaseState = {
     selectedGiftTitle: "",
     selectedGiftPrice: "",
+    selectedGiftAmount: "",
   };
 
   function escapeHtml(value) {
@@ -448,11 +449,12 @@ if (purchaseGrid && reservationGrid) {
     }, 220);
   }
 
-  function openPurchaseCheckoutModal(giftTitle, priceLabel = "") {
+  function openPurchaseCheckoutModal(giftTitle, priceLabel = "", rawAmount = priceLabel) {
     if (!purchaseCheckoutModal || !purchaseCheckoutForm || !purchaseCheckoutCopy || !purchaseCheckoutFeedback) return;
 
     purchaseState.selectedGiftTitle = giftTitle;
     purchaseState.selectedGiftPrice = priceLabel;
+    purchaseState.selectedGiftAmount = rawAmount;
     purchaseCheckoutForm.reset();
     purchaseCheckoutFeedback.textContent = "";
 
@@ -497,27 +499,7 @@ if (purchaseGrid && reservationGrid) {
     }).format(amount);
   }
 
-  function openPurchaseMessage(giftTitle, priceLabel = "", buyerData = null) {
-    const messageLines = [
-      "Oi! Quero comprar um presente da lista de casamento.",
-      `Presente: ${giftTitle}`,
-    ];
-
-    if (priceLabel) {
-      messageLines.push(`Valor: ${priceLabel}`);
-    }
-
-    if (buyerData) {
-      messageLines.push(`Convidado: ${buyerData.firstName} ${buyerData.lastName}`);
-      messageLines.push(`Pagamento: ${buyerData.paymentMethod}`);
-      messageLines.push(`Telefone: ${buyerData.phone}`);
-    }
-
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(messageLines.join("\n"))}`;
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-  }
-
-  function submitPurchaseCheckout(event) {
+  async function submitPurchaseCheckout(event) {
     event.preventDefault();
 
     if (!purchaseCheckoutForm || !purchaseCheckoutFeedback) return;
@@ -548,14 +530,34 @@ if (purchaseGrid && reservationGrid) {
       return;
     }
 
-    closePurchaseCheckoutModal();
-    openPurchaseMessage(purchaseState.selectedGiftTitle, purchaseState.selectedGiftPrice, {
-      firstName,
-      lastName,
-      paymentMethod,
-      phone,
-    });
-    showGiftToast(`Compra iniciada para "${purchaseState.selectedGiftTitle}".`);
+    try {
+      purchaseCheckoutFeedback.textContent = "Redirecionando para o pagamento...";
+
+      const response = await fetch("/api/purchase-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          giftTitle: purchaseState.selectedGiftTitle,
+          priceLabel: purchaseState.selectedGiftPrice,
+          amount: purchaseState.selectedGiftAmount,
+          firstName,
+          lastName,
+          paymentMethod,
+          phone,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.url) {
+        throw new Error(data.error || `HTTP ${response.status}`);
+      }
+
+      window.location.href = data.url;
+    } catch (error) {
+      console.error("Nao foi possivel iniciar o checkout do Stripe.", error);
+      purchaseCheckoutFeedback.textContent = "Nao foi possivel iniciar o pagamento agora.";
+    }
   }
 
   function submitCustomPurchase(event) {
@@ -580,7 +582,8 @@ if (purchaseGrid && reservationGrid) {
 
     const formattedAmount = formatCurrencyValue(amount);
     closeCustomPurchaseModal();
-    openPurchaseCheckoutModal(giftTitle, formattedAmount);
+    purchaseState.selectedGiftAmount = formattedAmount;
+    openPurchaseCheckoutModal(giftTitle, formattedAmount, String(amount).replace(".", ","));
   }
 
   async function submitGiftReservation(event) {

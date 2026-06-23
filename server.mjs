@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import Stripe from "stripe";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,6 +12,7 @@ const dataDir = path.join(__dirname, ".data");
 const visitorsFile = path.join(dataDir, "visitors.json");
 const messagesFile = path.join(dataDir, "messages.json");
 const giftReservationsFile = path.join(dataDir, "gift-reservations.json");
+const purchasesFile = path.join(dataDir, "purchases.json");
 const rsvpsFile = path.join(dataDir, "rsvps.json");
 
 const mimeTypes = {
@@ -27,6 +29,7 @@ const mimeTypes = {
 };
 
 let writeQueue = Promise.resolve();
+let stripeClient;
 
 async function ensureVisitorsStore() {
   await fs.mkdir(dataDir, { recursive: true });
@@ -55,6 +58,16 @@ async function ensureGiftReservationsStore() {
     await fs.access(giftReservationsFile);
   } catch {
     await fs.writeFile(giftReservationsFile, JSON.stringify({ reservations: [] }, null, 2));
+  }
+}
+
+async function ensurePurchasesStore() {
+  await fs.mkdir(dataDir, { recursive: true });
+
+  try {
+    await fs.access(purchasesFile);
+  } catch {
+    await fs.writeFile(purchasesFile, JSON.stringify({ purchases: [] }, null, 2));
   }
 }
 
@@ -94,6 +107,13 @@ async function readRsvps() {
   const raw = await fs.readFile(rsvpsFile, "utf8");
   const parsed = JSON.parse(raw || '{"rsvps":[]}');
   return Array.isArray(parsed.rsvps) ? parsed.rsvps : [];
+}
+
+async function readPurchases() {
+  await ensurePurchasesStore();
+  const raw = await fs.readFile(purchasesFile, "utf8");
+  const parsed = JSON.parse(raw || '{"purchases":[]}');
+  return Array.isArray(parsed.purchases) ? parsed.purchases : [];
 }
 
 function hashIp(ipAddress) {
@@ -174,6 +194,30 @@ async function createRsvp({ firstName, lastName, phone }) {
   return writeQueue;
 }
 
+async function createPurchase(purchase) {
+  writeQueue = writeQueue.then(async () => {
+    const purchases = await readPurchases();
+    purchases.unshift({
+      id: purchase.id ?? Date.now(),
+      sessionId: purchase.sessionId,
+      paymentIntentId: purchase.paymentIntentId ?? "",
+      giftTitle: purchase.giftTitle.slice(0, 160),
+      amountTotal: purchase.amountTotal,
+      currency: purchase.currency.slice(0, 12),
+      firstName: purchase.firstName.slice(0, 80),
+      lastName: purchase.lastName.slice(0, 80),
+      paymentMethod: purchase.paymentMethod.slice(0, 80),
+      phone: purchase.phone.slice(0, 40),
+      paymentStatus: purchase.paymentStatus.slice(0, 40),
+      createdAt: purchase.createdAt,
+    });
+    await fs.writeFile(purchasesFile, JSON.stringify({ purchases }, null, 2));
+    return purchases;
+  });
+
+  return writeQueue;
+}
+
 function escapeHtml(value) {
   return value
     .replaceAll("&", "&amp;")
@@ -204,6 +248,47 @@ function sendJson(response, statusCode, payload) {
   response.end(JSON.stringify(payload));
 }
 
+function getAppBaseUrl(request) {
+  if (process.env.PUBLIC_APP_URL) {
+    return process.env.PUBLIC_APP_URL.replace(/\/$/, "");
+  }
+
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN.replace(/\/$/, "")}`;
+  }
+
+  return `http://${request.headers.host}`;
+}
+
+function parseCurrencyToCents(value) {
+  const normalized = String(value || "")
+    .trim()
+    .replaceAll(/\s+/g, "")
+    .replace(/^R\$\s*/i, "")
+    .replaceAll(".", "")
+    .replace(",", ".");
+
+  const amount = Number(normalized);
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return NaN;
+  }
+
+  return Math.round(amount * 100);
+}
+
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return null;
+  }
+
+  if (!stripeClient) {
+    stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY);
+  }
+
+  return stripeClient;
+}
+
 async function serveStaticFile(response, pathname) {
   const normalizedPath = pathname === "/" ? "/index.html" : pathname;
   const resolvedPath = path.join(__dirname, decodeURIComponent(normalizedPath));
@@ -228,6 +313,55 @@ async function serveStaticFile(response, pathname) {
 
 const server = http.createServer(async (request, response) => {
   const requestUrl = new URL(request.url || "/", `http://${request.headers.host}`);
+
+  if (requestUrl.pathname === "/api/stripe-webhook" && request.method === "POST") {
+    try {
+      const stripe = getStripeClient();
+      const signature = request.headers["stripe-signature"];
+
+      if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) {
+        sendJson(response, 503, { error: "Stripe webhook nao configurado." });
+        return;
+      }
+
+      if (typeof signature !== "string") {
+        sendJson(response, 400, { error: "Assinatura do webhook ausente." });
+        return;
+      }
+
+      const rawBody = await readRequestBody(request);
+      const event = stripe.webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET);
+
+      if (event.type === "checkout.session.completed") {
+        const session = event.data.object;
+        const existingPurchases = await readPurchases();
+        const alreadyStored = existingPurchases.some((purchase) => purchase.sessionId === session.id);
+
+        if (!alreadyStored) {
+          await createPurchase({
+            id: Date.now(),
+            sessionId: session.id,
+            paymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : "",
+            giftTitle: String(session.metadata?.giftTitle || "Presente personalizado"),
+            amountTotal: Number(session.amount_total || 0),
+            currency: String(session.currency || "brl"),
+            firstName: String(session.metadata?.firstName || ""),
+            lastName: String(session.metadata?.lastName || ""),
+            paymentMethod: String(session.metadata?.paymentMethod || ""),
+            phone: String(session.metadata?.phone || ""),
+            paymentStatus: String(session.payment_status || ""),
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+
+      sendJson(response, 200, { received: true });
+    } catch (error) {
+      console.error("Erro ao processar webhook do Stripe:", error);
+      sendJson(response, 400, { error: "Webhook invalido." });
+    }
+    return;
+  }
 
   if (requestUrl.pathname === "/api/visitors") {
     try {
@@ -348,6 +482,101 @@ const server = http.createServer(async (request, response) => {
     } catch (error) {
       console.error("Erro ao salvar confirmacao de presenca:", error);
       sendJson(response, 500, { error: "Nao foi possivel salvar a confirmacao." });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/purchase-checkout-session" && request.method === "POST") {
+    try {
+      const stripe = getStripeClient();
+
+      if (!stripe) {
+        sendJson(response, 503, { error: "Stripe nao configurado no servidor." });
+        return;
+      }
+
+      const rawBody = await readRequestBody(request);
+      const payload = JSON.parse(rawBody || "{}");
+      const giftTitle = String(payload.giftTitle || "").trim();
+      const priceLabel = String(payload.priceLabel || "").trim();
+      const firstName = String(payload.firstName || "").trim();
+      const lastName = String(payload.lastName || "").trim();
+      const paymentMethod = String(payload.paymentMethod || "").trim();
+      const phone = String(payload.phone || "").trim();
+      const amountInCents = parseCurrencyToCents(payload.amount);
+
+      if (!giftTitle || !firstName || !lastName || !paymentMethod || !phone || !Number.isFinite(amountInCents)) {
+        sendJson(response, 400, { error: "Dados invalidos para iniciar o checkout." });
+        return;
+      }
+
+      const baseUrl = getAppBaseUrl(request);
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        success_url: `${baseUrl}/compra-sucesso.html?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}/compra-cancelada.html`,
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: "brl",
+              unit_amount: amountInCents,
+              product_data: {
+                name: giftTitle,
+                description: `Presente da lista de casamento para ${firstName} ${lastName}`.slice(0, 255),
+              },
+            },
+          },
+        ],
+        metadata: {
+          giftTitle,
+          priceLabel,
+          firstName,
+          lastName,
+          paymentMethod,
+          phone,
+        },
+      });
+
+      sendJson(response, 200, {
+        url: session.url,
+        sessionId: session.id,
+      });
+    } catch (error) {
+      console.error("Erro ao criar sessao de checkout do Stripe:", error);
+      sendJson(response, 500, { error: "Nao foi possivel iniciar o pagamento." });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/checkout-session" && request.method === "GET") {
+    try {
+      const stripe = getStripeClient();
+      const sessionId = String(requestUrl.searchParams.get("session_id") || "").trim();
+
+      if (!stripe) {
+        sendJson(response, 503, { error: "Stripe nao configurado no servidor." });
+        return;
+      }
+
+      if (!sessionId) {
+        sendJson(response, 400, { error: "session_id obrigatorio." });
+        return;
+      }
+
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      sendJson(response, 200, {
+        id: session.id,
+        paymentStatus: session.payment_status,
+        customerEmail: session.customer_details?.email || "",
+        amountTotal: session.amount_total || 0,
+        currency: session.currency || "brl",
+        giftTitle: session.metadata?.giftTitle || "Presente",
+      });
+    } catch (error) {
+      console.error("Erro ao consultar sessao do Stripe:", error);
+      sendJson(response, 500, { error: "Nao foi possivel consultar o pagamento." });
     }
     return;
   }
