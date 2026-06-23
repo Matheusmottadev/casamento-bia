@@ -516,6 +516,13 @@ const server = http.createServer(async (request, response) => {
         success_url: `${baseUrl}/compra-sucesso.html?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/compra-cancelada.html`,
         payment_method_types: ["card"],
+        payment_method_options: {
+          card: {
+            installments: {
+              enabled: true,
+            },
+          },
+        },
         line_items: [
           {
             quantity: 1,
