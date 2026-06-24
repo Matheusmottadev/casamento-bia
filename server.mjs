@@ -473,61 +473,83 @@ async function createPurchase(purchase) {
 async function upsertPurchaseByExternalReference(externalReference, nextPurchase) {
   const normalizedReference = externalReference.slice(0, 120);
 
-  await query(
+  const existingPurchase = await queryOne(
     `
-      INSERT INTO purchases (
-        session_id,
-        payment_intent_id,
-        provider,
-        external_reference,
-        gateway_preference_id,
-        gateway_payment_id,
-        gift_title,
-        amount_total,
-        currency,
-        first_name,
-        last_name,
-        payment_method,
-        phone,
-        payment_status,
-        created_at
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-      ON CONFLICT (external_reference) DO UPDATE
-      SET
-        session_id = EXCLUDED.session_id,
-        payment_intent_id = EXCLUDED.payment_intent_id,
-        provider = EXCLUDED.provider,
-        gateway_preference_id = EXCLUDED.gateway_preference_id,
-        gateway_payment_id = EXCLUDED.gateway_payment_id,
-        gift_title = EXCLUDED.gift_title,
-        amount_total = EXCLUDED.amount_total,
-        currency = EXCLUDED.currency,
-        first_name = EXCLUDED.first_name,
-        last_name = EXCLUDED.last_name,
-        payment_method = EXCLUDED.payment_method,
-        phone = EXCLUDED.phone,
-        payment_status = EXCLUDED.payment_status,
-        created_at = EXCLUDED.created_at;
+      SELECT id
+      FROM purchases
+      WHERE external_reference = $1
+      LIMIT 1;
     `,
-    [
-      nextPurchase.sessionId ?? "",
-      nextPurchase.paymentIntentId ?? "",
-      nextPurchase.provider ?? "",
-      normalizedReference,
-      nextPurchase.gatewayPreferenceId ?? "",
-      nextPurchase.gatewayPaymentId ?? "",
-      nextPurchase.giftTitle.slice(0, 160),
-      Number(nextPurchase.amountTotal || 0),
-      nextPurchase.currency.slice(0, 12),
-      nextPurchase.firstName.slice(0, 80),
-      nextPurchase.lastName.slice(0, 80),
-      nextPurchase.paymentMethod.slice(0, 80),
-      nextPurchase.phone.slice(0, 40),
-      nextPurchase.paymentStatus.slice(0, 40),
-      nextPurchase.createdAt,
-    ],
+    [normalizedReference],
   );
+
+  const values = [
+    nextPurchase.sessionId ?? "",
+    nextPurchase.paymentIntentId ?? "",
+    nextPurchase.provider ?? "",
+    normalizedReference,
+    nextPurchase.gatewayPreferenceId ?? "",
+    nextPurchase.gatewayPaymentId ?? "",
+    nextPurchase.giftTitle.slice(0, 160),
+    Number(nextPurchase.amountTotal || 0),
+    nextPurchase.currency.slice(0, 12),
+    nextPurchase.firstName.slice(0, 80),
+    nextPurchase.lastName.slice(0, 80),
+    nextPurchase.paymentMethod.slice(0, 80),
+    nextPurchase.phone.slice(0, 40),
+    nextPurchase.paymentStatus.slice(0, 40),
+    nextPurchase.createdAt,
+  ];
+
+  if (existingPurchase) {
+    await query(
+      `
+        UPDATE purchases
+        SET
+          session_id = $1,
+          payment_intent_id = $2,
+          provider = $3,
+          external_reference = $4,
+          gateway_preference_id = $5,
+          gateway_payment_id = $6,
+          gift_title = $7,
+          amount_total = $8,
+          currency = $9,
+          first_name = $10,
+          last_name = $11,
+          payment_method = $12,
+          phone = $13,
+          payment_status = $14,
+          created_at = $15
+        WHERE id = $16;
+      `,
+      [...values, existingPurchase.id],
+    );
+  } else {
+    await query(
+      `
+        INSERT INTO purchases (
+          session_id,
+          payment_intent_id,
+          provider,
+          external_reference,
+          gateway_preference_id,
+          gateway_payment_id,
+          gift_title,
+          amount_total,
+          currency,
+          first_name,
+          last_name,
+          payment_method,
+          phone,
+          payment_status,
+          created_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15);
+      `,
+      values,
+    );
+  }
 
   return readPurchases();
 }
