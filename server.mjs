@@ -3,16 +3,19 @@ import { promises as fs } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import pg from "pg";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const port = Number(process.env.PORT || 4173);
 const dataDir = path.join(__dirname, ".data");
+const catalogSourceFile = path.join(__dirname, "data", "gifts-catalog.json");
 const visitorsFile = path.join(dataDir, "visitors.json");
 const messagesFile = path.join(dataDir, "messages.json");
 const giftReservationsFile = path.join(dataDir, "gift-reservations.json");
 const purchasesFile = path.join(dataDir, "purchases.json");
 const rsvpsFile = path.join(dataDir, "rsvps.json");
+const { Pool } = pg;
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -27,91 +30,313 @@ const mimeTypes = {
   ".webp": "image/webp",
 };
 
-let writeQueue = Promise.resolve();
+const databaseUrl = process.env.DATABASE_URL;
+const pool = databaseUrl
+  ? new Pool({
+      connectionString: databaseUrl,
+      ssl:
+        process.env.PGSSLMODE === "disable" || databaseUrl.includes("localhost")
+          ? false
+          : { rejectUnauthorized: false },
+    })
+  : null;
 
-async function ensureVisitorsStore() {
-  await fs.mkdir(dataDir, { recursive: true });
+async function query(text, params = []) {
+  if (!pool) {
+    throw new Error("DATABASE_URL nao configurada.");
+  }
 
-  try {
-    await fs.access(visitorsFile);
-  } catch {
-    await fs.writeFile(visitorsFile, JSON.stringify({ visitors: [] }, null, 2));
+  const result = await pool.query(text, params);
+  return result.rows;
+}
+
+async function queryOne(text, params = []) {
+  const rows = await query(text, params);
+  return rows[0] ?? null;
+}
+
+async function execute(text, params = []) {
+  if (!pool) {
+    throw new Error("DATABASE_URL nao configurada.");
+  }
+
+  await pool.query(text, params);
+}
+
+async function ensureDatabase() {
+  if (!pool) {
+    throw new Error("DATABASE_URL nao configurada.");
+  }
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS visitors (
+      ip_hash TEXT PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id BIGSERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS gift_catalog (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      price_label TEXT,
+      quantity INTEGER NOT NULL DEFAULT 1
+    );
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS gift_reservations (
+      id BIGSERIAL PRIMARY KEY,
+      gift_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      contact TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS rsvps (
+      id BIGSERIAL PRIMARY KEY,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS purchases (
+      id BIGSERIAL PRIMARY KEY,
+      session_id TEXT NOT NULL DEFAULT '',
+      payment_intent_id TEXT NOT NULL DEFAULT '',
+      provider TEXT NOT NULL DEFAULT '',
+      external_reference TEXT NOT NULL DEFAULT '',
+      gateway_preference_id TEXT NOT NULL DEFAULT '',
+      gateway_payment_id TEXT NOT NULL DEFAULT '',
+      gift_title TEXT NOT NULL,
+      amount_total INTEGER NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'brl',
+      first_name TEXT NOT NULL DEFAULT '',
+      last_name TEXT NOT NULL DEFAULT '',
+      payment_method TEXT NOT NULL DEFAULT '',
+      phone TEXT NOT NULL DEFAULT '',
+      payment_status TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await execute(`
+    CREATE UNIQUE INDEX IF NOT EXISTS purchases_external_reference_idx
+    ON purchases (external_reference)
+    WHERE external_reference <> '';
+  `);
+
+  await seedGiftCatalog();
+  await importLegacyDataIfNeeded();
+}
+
+async function seedGiftCatalog() {
+  const source = await fs.readFile(catalogSourceFile, "utf8");
+  const parsed = JSON.parse(source || '{"gifts":[]}');
+  const gifts = Array.isArray(parsed.gifts) ? parsed.gifts : [];
+
+  for (const gift of gifts) {
+    await execute(
+      `
+        INSERT INTO gift_catalog (id, type, title, price_label, quantity)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (id) DO UPDATE
+        SET type = EXCLUDED.type,
+            title = EXCLUDED.title,
+            price_label = EXCLUDED.price_label,
+            quantity = EXCLUDED.quantity;
+      `,
+      [
+        gift.id,
+        gift.type,
+        gift.title,
+        gift.priceLabel ?? null,
+        Number(gift.quantity || 1),
+      ],
+    );
   }
 }
 
-async function ensureMessagesStore() {
-  await fs.mkdir(dataDir, { recursive: true });
-
+async function readLegacyStore(filePath, rootKey) {
   try {
-    await fs.access(messagesFile);
+    const raw = await fs.readFile(filePath, "utf8");
+    const parsed = JSON.parse(raw || "{}");
+    return Array.isArray(parsed[rootKey]) ? parsed[rootKey] : [];
   } catch {
-    await fs.writeFile(messagesFile, JSON.stringify({ messages: [] }, null, 2));
+    return [];
   }
 }
 
-async function ensureGiftReservationsStore() {
-  await fs.mkdir(dataDir, { recursive: true });
+async function importLegacyDataIfNeeded() {
+  const [visitorsCount, messagesCount, reservationsCount, rsvpsCount, purchasesCount] = await Promise.all([
+    queryOne(`SELECT COUNT(*)::INT AS total FROM visitors;`),
+    queryOne(`SELECT COUNT(*)::INT AS total FROM messages;`),
+    queryOne(`SELECT COUNT(*)::INT AS total FROM gift_reservations;`),
+    queryOne(`SELECT COUNT(*)::INT AS total FROM rsvps;`),
+    queryOne(`SELECT COUNT(*)::INT AS total FROM purchases;`),
+  ]);
 
-  try {
-    await fs.access(giftReservationsFile);
-  } catch {
-    await fs.writeFile(giftReservationsFile, JSON.stringify({ reservations: [] }, null, 2));
+  if (!Number(visitorsCount?.total || 0)) {
+    const visitors = await readLegacyStore(visitorsFile, "visitors");
+    for (const ipHash of visitors) {
+      await execute(`INSERT INTO visitors (ip_hash) VALUES ($1) ON CONFLICT (ip_hash) DO NOTHING;`, [String(ipHash)]);
+    }
   }
-}
 
-async function ensurePurchasesStore() {
-  await fs.mkdir(dataDir, { recursive: true });
-
-  try {
-    await fs.access(purchasesFile);
-  } catch {
-    await fs.writeFile(purchasesFile, JSON.stringify({ purchases: [] }, null, 2));
+  if (!Number(messagesCount?.total || 0)) {
+    const messages = await readLegacyStore(messagesFile, "messages");
+    for (const item of messages) {
+      await execute(`INSERT INTO messages (name, message, created_at) VALUES ($1, $2, $3);`, [
+        String(item.name || ""),
+        String(item.message || ""),
+        item.createdAt || new Date().toISOString(),
+      ]);
+    }
   }
-}
 
-async function ensureRsvpsStore() {
-  await fs.mkdir(dataDir, { recursive: true });
+  if (!Number(reservationsCount?.total || 0)) {
+    const reservations = await readLegacyStore(giftReservationsFile, "reservations");
+    for (const item of reservations) {
+      await execute(`INSERT INTO gift_reservations (gift_id, name, contact, created_at) VALUES ($1, $2, $3, $4);`, [
+        String(item.giftId || ""),
+        String(item.name || ""),
+        String(item.contact || ""),
+        item.createdAt || new Date().toISOString(),
+      ]);
+    }
+  }
 
-  try {
-    await fs.access(rsvpsFile);
-  } catch {
-    await fs.writeFile(rsvpsFile, JSON.stringify({ rsvps: [] }, null, 2));
+  if (!Number(rsvpsCount?.total || 0)) {
+    const rsvps = await readLegacyStore(rsvpsFile, "rsvps");
+    for (const item of rsvps) {
+      await execute(`INSERT INTO rsvps (first_name, last_name, phone, created_at) VALUES ($1, $2, $3, $4);`, [
+        String(item.firstName || ""),
+        String(item.lastName || ""),
+        String(item.phone || ""),
+        item.createdAt || new Date().toISOString(),
+      ]);
+    }
+  }
+
+  if (!Number(purchasesCount?.total || 0)) {
+    const purchases = await readLegacyStore(purchasesFile, "purchases");
+    for (const item of purchases) {
+      await execute(
+        `
+          INSERT INTO purchases (
+            session_id,
+            payment_intent_id,
+            provider,
+            external_reference,
+            gateway_preference_id,
+            gateway_payment_id,
+            gift_title,
+            amount_total,
+            currency,
+            first_name,
+            last_name,
+            payment_method,
+            phone,
+            payment_status,
+            created_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15);
+        `,
+        [
+          String(item.sessionId || ""),
+          String(item.paymentIntentId || ""),
+          String(item.provider || ""),
+          String(item.externalReference || ""),
+          String(item.gatewayPreferenceId || ""),
+          String(item.gatewayPaymentId || ""),
+          String(item.giftTitle || ""),
+          Number(item.amountTotal || 0),
+          String(item.currency || "brl"),
+          String(item.firstName || ""),
+          String(item.lastName || ""),
+          String(item.paymentMethod || ""),
+          String(item.phone || ""),
+          String(item.paymentStatus || ""),
+          item.createdAt || new Date().toISOString(),
+        ],
+      );
+    }
   }
 }
 
 async function readVisitors() {
-  await ensureVisitorsStore();
-  const raw = await fs.readFile(visitorsFile, "utf8");
-  const parsed = JSON.parse(raw || '{"visitors":[]}');
-  return Array.isArray(parsed.visitors) ? parsed.visitors : [];
+  return query(`SELECT ip_hash AS "ipHash" FROM visitors ORDER BY created_at ASC;`);
 }
 
 async function readMessages() {
-  await ensureMessagesStore();
-  const raw = await fs.readFile(messagesFile, "utf8");
-  const parsed = JSON.parse(raw || '{"messages":[]}');
-  return Array.isArray(parsed.messages) ? parsed.messages : [];
+  return query(`
+    SELECT id, name, message, created_at AS "createdAt"
+    FROM messages
+    ORDER BY created_at DESC;
+  `);
 }
 
 async function readGiftReservations() {
-  await ensureGiftReservationsStore();
-  const raw = await fs.readFile(giftReservationsFile, "utf8");
-  const parsed = JSON.parse(raw || '{"reservations":[]}');
-  return Array.isArray(parsed.reservations) ? parsed.reservations : [];
+  return query(`
+    SELECT id, gift_id AS "giftId", name, contact, created_at AS "createdAt"
+    FROM gift_reservations
+    ORDER BY created_at DESC;
+  `);
 }
 
 async function readRsvps() {
-  await ensureRsvpsStore();
-  const raw = await fs.readFile(rsvpsFile, "utf8");
-  const parsed = JSON.parse(raw || '{"rsvps":[]}');
-  return Array.isArray(parsed.rsvps) ? parsed.rsvps : [];
+  return query(`
+    SELECT id, first_name AS "firstName", last_name AS "lastName", phone, created_at AS "createdAt"
+    FROM rsvps
+    ORDER BY created_at DESC;
+  `);
 }
 
 async function readPurchases() {
-  await ensurePurchasesStore();
-  const raw = await fs.readFile(purchasesFile, "utf8");
-  const parsed = JSON.parse(raw || '{"purchases":[]}');
-  return Array.isArray(parsed.purchases) ? parsed.purchases : [];
+  return query(`
+    SELECT
+      id,
+      session_id AS "sessionId",
+      payment_intent_id AS "paymentIntentId",
+      provider,
+      external_reference AS "externalReference",
+      gateway_preference_id AS "gatewayPreferenceId",
+      gateway_payment_id AS "gatewayPaymentId",
+      gift_title AS "giftTitle",
+      amount_total AS "amountTotal",
+      currency,
+      first_name AS "firstName",
+      last_name AS "lastName",
+      payment_method AS "paymentMethod",
+      phone,
+      payment_status AS "paymentStatus",
+      created_at AS "createdAt"
+    FROM purchases
+    ORDER BY created_at DESC;
+  `);
+}
+
+async function readGiftCatalog() {
+  return query(`
+    SELECT id, type, title, price_label AS "priceLabel", quantity
+    FROM gift_catalog
+    ORDER BY type ASC, title ASC;
+  `);
 }
 
 function hashIp(ipAddress) {
@@ -128,136 +353,159 @@ function getClientIp(request) {
 async function registerUniqueVisitor(request) {
   const ipHash = hashIp(getClientIp(request));
 
-  writeQueue = writeQueue.then(async () => {
-    const visitors = await readVisitors();
+  await execute(
+    `
+      INSERT INTO visitors (ip_hash)
+      VALUES ($1)
+      ON CONFLICT (ip_hash) DO NOTHING;
+    `,
+    [ipHash],
+  );
 
-    if (!visitors.includes(ipHash)) {
-      visitors.push(ipHash);
-      await fs.writeFile(visitorsFile, JSON.stringify({ visitors }, null, 2));
-    }
-
-    return visitors.length;
-  });
-
-  return writeQueue;
+  const result = await queryOne(`SELECT COUNT(*)::INT AS total FROM visitors;`);
+  return Number(result?.total || 0);
 }
 
 async function createMessage({ name, message }) {
-  writeQueue = writeQueue.then(async () => {
-    const messages = await readMessages();
-    messages.unshift({
-      id: Date.now(),
-      name: name.slice(0, 60),
-      message: message.slice(0, 280),
-      createdAt: new Date().toISOString(),
-    });
-    await fs.writeFile(messagesFile, JSON.stringify({ messages }, null, 2));
-    return messages;
-  });
+  await query(
+    `
+      INSERT INTO messages (name, message)
+      VALUES ($1, $2);
+    `,
+    [name.slice(0, 60), message.slice(0, 280)],
+  );
 
-  return writeQueue;
+  return readMessages();
 }
 
 async function createGiftReservation({ giftId, name, contact = "" }) {
-  writeQueue = writeQueue.then(async () => {
-    const reservations = await readGiftReservations();
-    reservations.unshift({
-      id: Date.now(),
-      giftId: giftId.slice(0, 80),
-      name: name.slice(0, 80),
-      contact: contact.slice(0, 120),
-      createdAt: new Date().toISOString(),
-    });
-    await fs.writeFile(giftReservationsFile, JSON.stringify({ reservations }, null, 2));
-    return reservations;
-  });
+  await query(
+    `
+      INSERT INTO gift_reservations (gift_id, name, contact)
+      VALUES ($1, $2, $3);
+    `,
+    [giftId.slice(0, 80), name.slice(0, 80), contact.slice(0, 120)],
+  );
 
-  return writeQueue;
+  return readGiftReservations();
 }
 
 async function createRsvp({ firstName, lastName, phone }) {
-  writeQueue = writeQueue.then(async () => {
-    const rsvps = await readRsvps();
-    rsvps.unshift({
-      id: Date.now(),
-      firstName: firstName.slice(0, 80),
-      lastName: lastName.slice(0, 80),
-      phone: phone.slice(0, 40),
-      createdAt: new Date().toISOString(),
-    });
-    await fs.writeFile(rsvpsFile, JSON.stringify({ rsvps }, null, 2));
-    return rsvps;
-  });
+  await query(
+    `
+      INSERT INTO rsvps (first_name, last_name, phone)
+      VALUES ($1, $2, $3);
+    `,
+    [firstName.slice(0, 80), lastName.slice(0, 80), phone.slice(0, 40)],
+  );
 
-  return writeQueue;
+  return readRsvps();
 }
 
 async function createPurchase(purchase) {
-  writeQueue = writeQueue.then(async () => {
-    const purchases = await readPurchases();
-    purchases.unshift({
-      id: purchase.id ?? Date.now(),
-      sessionId: purchase.sessionId ?? "",
-      paymentIntentId: purchase.paymentIntentId ?? "",
-      provider: purchase.provider ?? "",
-      externalReference: purchase.externalReference ?? "",
-      gatewayPreferenceId: purchase.gatewayPreferenceId ?? "",
-      gatewayPaymentId: purchase.gatewayPaymentId ?? "",
-      giftTitle: purchase.giftTitle.slice(0, 160),
-      amountTotal: purchase.amountTotal,
-      currency: purchase.currency.slice(0, 12),
-      firstName: purchase.firstName.slice(0, 80),
-      lastName: purchase.lastName.slice(0, 80),
-      paymentMethod: purchase.paymentMethod.slice(0, 80),
-      phone: purchase.phone.slice(0, 40),
-      paymentStatus: purchase.paymentStatus.slice(0, 40),
-      createdAt: purchase.createdAt,
-    });
-    await fs.writeFile(purchasesFile, JSON.stringify({ purchases }, null, 2));
-    return purchases;
-  });
+  await query(
+    `
+      INSERT INTO purchases (
+        session_id,
+        payment_intent_id,
+        provider,
+        external_reference,
+        gateway_preference_id,
+        gateway_payment_id,
+        gift_title,
+        amount_total,
+        currency,
+        first_name,
+        last_name,
+        payment_method,
+        phone,
+        payment_status,
+        created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15);
+    `,
+    [
+      purchase.sessionId ?? "",
+      purchase.paymentIntentId ?? "",
+      purchase.provider ?? "",
+      purchase.externalReference ?? "",
+      purchase.gatewayPreferenceId ?? "",
+      purchase.gatewayPaymentId ?? "",
+      purchase.giftTitle.slice(0, 160),
+      Number(purchase.amountTotal || 0),
+      purchase.currency.slice(0, 12),
+      purchase.firstName.slice(0, 80),
+      purchase.lastName.slice(0, 80),
+      purchase.paymentMethod.slice(0, 80),
+      purchase.phone.slice(0, 40),
+      purchase.paymentStatus.slice(0, 40),
+      purchase.createdAt,
+    ],
+  );
 
-  return writeQueue;
+  return readPurchases();
 }
 
 async function upsertPurchaseByExternalReference(externalReference, nextPurchase) {
-  writeQueue = writeQueue.then(async () => {
-    const purchases = await readPurchases();
-    const normalizedReference = externalReference.slice(0, 120);
-    const index = purchases.findIndex((purchase) => purchase.externalReference === normalizedReference);
-    const normalizedPurchase = {
-      id: nextPurchase.id ?? Date.now(),
-      sessionId: nextPurchase.sessionId ?? "",
-      paymentIntentId: nextPurchase.paymentIntentId ?? "",
-      provider: nextPurchase.provider ?? "",
-      externalReference: normalizedReference,
-      gatewayPreferenceId: nextPurchase.gatewayPreferenceId ?? "",
-      gatewayPaymentId: nextPurchase.gatewayPaymentId ?? "",
-      giftTitle: nextPurchase.giftTitle.slice(0, 160),
-      amountTotal: nextPurchase.amountTotal,
-      currency: nextPurchase.currency.slice(0, 12),
-      firstName: nextPurchase.firstName.slice(0, 80),
-      lastName: nextPurchase.lastName.slice(0, 80),
-      paymentMethod: nextPurchase.paymentMethod.slice(0, 80),
-      phone: nextPurchase.phone.slice(0, 40),
-      paymentStatus: nextPurchase.paymentStatus.slice(0, 40),
-      createdAt: nextPurchase.createdAt,
-    };
+  const normalizedReference = externalReference.slice(0, 120);
 
-    if (index >= 0) {
-      purchases[index] = {
-        ...purchases[index],
-        ...normalizedPurchase,
-      };
-    } else {
-      purchases.unshift(normalizedPurchase);
-    }
+  await query(
+    `
+      INSERT INTO purchases (
+        session_id,
+        payment_intent_id,
+        provider,
+        external_reference,
+        gateway_preference_id,
+        gateway_payment_id,
+        gift_title,
+        amount_total,
+        currency,
+        first_name,
+        last_name,
+        payment_method,
+        phone,
+        payment_status,
+        created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      ON CONFLICT (external_reference) DO UPDATE
+      SET
+        session_id = EXCLUDED.session_id,
+        payment_intent_id = EXCLUDED.payment_intent_id,
+        provider = EXCLUDED.provider,
+        gateway_preference_id = EXCLUDED.gateway_preference_id,
+        gateway_payment_id = EXCLUDED.gateway_payment_id,
+        gift_title = EXCLUDED.gift_title,
+        amount_total = EXCLUDED.amount_total,
+        currency = EXCLUDED.currency,
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
+        payment_method = EXCLUDED.payment_method,
+        phone = EXCLUDED.phone,
+        payment_status = EXCLUDED.payment_status,
+        created_at = EXCLUDED.created_at;
+    `,
+    [
+      nextPurchase.sessionId ?? "",
+      nextPurchase.paymentIntentId ?? "",
+      nextPurchase.provider ?? "",
+      normalizedReference,
+      nextPurchase.gatewayPreferenceId ?? "",
+      nextPurchase.gatewayPaymentId ?? "",
+      nextPurchase.giftTitle.slice(0, 160),
+      Number(nextPurchase.amountTotal || 0),
+      nextPurchase.currency.slice(0, 12),
+      nextPurchase.firstName.slice(0, 80),
+      nextPurchase.lastName.slice(0, 80),
+      nextPurchase.paymentMethod.slice(0, 80),
+      nextPurchase.phone.slice(0, 40),
+      nextPurchase.paymentStatus.slice(0, 40),
+      nextPurchase.createdAt,
+    ],
+  );
 
-    await fs.writeFile(purchasesFile, JSON.stringify({ purchases }, null, 2));
-    return purchases;
-  });
-
-  return writeQueue;
+  return readPurchases();
 }
 
 function escapeHtml(value) {
@@ -317,6 +565,20 @@ function parseCurrencyToCents(value) {
   }
 
   return Math.round(amount * 100);
+}
+
+function normalizePaymentStatus(status) {
+  const normalized = String(status || "").toLowerCase();
+
+  if (["approved", "paid", "succeeded"].includes(normalized)) {
+    return "paid";
+  }
+
+  if (["pending", "in_process", "authorized"].includes(normalized)) {
+    return "pending";
+  }
+
+  return normalized || "unknown";
 }
 
 function formatCurrencyFromCents(amountInCents) {
@@ -663,9 +925,68 @@ const server = http.createServer(async (request, response) => {
     return;
   }
 
+  if (requestUrl.pathname === "/api/couple-dashboard" && request.method === "GET") {
+    try {
+      const [gifts, reservations, purchases, rsvps] = await Promise.all([
+        readGiftCatalog(),
+        readGiftReservations(),
+        readPurchases(),
+        readRsvps(),
+      ]);
+
+      const reservationGiftTitles = new Map(gifts.map((gift) => [gift.id, gift.title]));
+
+      const reservationRows = reservations.map((reservation) => ({
+        ...reservation,
+        giftTitle: reservationGiftTitles.get(reservation.giftId) || reservation.giftId,
+      }));
+
+      const giftsWithStats = gifts.map((gift) => {
+        const reservedCount = reservationRows.filter((reservation) => reservation.giftId === gift.id).length;
+        const matchingPurchases = purchases.filter((purchase) => purchase.giftTitle === gift.title);
+        const paidCount = matchingPurchases.filter((purchase) => normalizePaymentStatus(purchase.paymentStatus) === "paid").length;
+        const pendingCount = matchingPurchases.filter((purchase) => normalizePaymentStatus(purchase.paymentStatus) === "pending").length;
+
+        return {
+          ...gift,
+          reservedCount,
+          paidCount,
+          pendingCount,
+        };
+      });
+
+      const paidPurchases = purchases.filter((purchase) => normalizePaymentStatus(purchase.paymentStatus) === "paid");
+      const totalPaidAmount = paidPurchases.reduce((sum, purchase) => sum + (Number(purchase.amountTotal) || 0), 0);
+
+      sendJson(response, 200, {
+        summary: {
+          totalGuests: rsvps.length,
+          totalReservations: reservations.length,
+          totalPurchases: purchases.length,
+          totalPaidAmount,
+        },
+        gifts: giftsWithStats,
+        reservations: reservationRows,
+        purchases,
+        rsvps,
+      });
+    } catch (error) {
+      console.error("Erro ao carregar painel dos noivos:", error);
+      sendJson(response, 500, { error: "Nao foi possivel carregar o painel dos noivos." });
+    }
+    return;
+  }
+
   await serveStaticFile(response, requestUrl.pathname);
 });
 
-server.listen(port, () => {
-  console.log(`Servidor rodando em http://127.0.0.1:${port}`);
-});
+ensureDatabase()
+  .then(() => {
+    server.listen(port, () => {
+      console.log(`Servidor rodando em http://127.0.0.1:${port}`);
+    });
+  })
+  .catch((error) => {
+    console.error("Nao foi possivel inicializar o PostgreSQL:", error);
+    process.exit(1);
+  });

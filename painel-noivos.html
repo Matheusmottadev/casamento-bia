@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel dos noivos | Kaique & Beatriz</title>
+    <link href="https://fonts.icasei.com.br/fonts.css?use=Recoleta-Light" rel="stylesheet" />
+    <link href="https://fonts.icasei.com.br/fonts.css?use=Radon-Regular" rel="stylesheet" />
+    <link href="https://fonts.icasei.com.br/fonts.css?use=trajanPro" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body>
+    <main class="dashboard-page">
+      <section class="dashboard-shell">
+        <p class="status-card__eyebrow">Painel dos noivos</p>
+        <h1 class="status-card__title">Base de presentes e confirmações</h1>
+        <p class="status-card__copy" id="dashboard-feedback">Preparando a visão geral do casamento.</p>
+
+        <section class="dashboard-summary" id="dashboard-summary"></section>
+
+        <section class="dashboard-block">
+          <h2 class="dashboard-block__title">Presentes</h2>
+          <div class="dashboard-table-wrap">
+            <table class="dashboard-table">
+              <thead>
+                <tr>
+                  <th>Presente</th>
+                  <th>Tipo</th>
+                  <th>Qtde</th>
+                  <th>Reservados</th>
+                  <th>Pagos</th>
+                  <th>Pendentes</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-gifts"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="dashboard-block">
+          <h2 class="dashboard-block__title">Reservas de presentes</h2>
+          <div class="dashboard-table-wrap">
+            <table class="dashboard-table">
+              <thead>
+                <tr>
+                  <th>Presente</th>
+                  <th>Nome</th>
+                  <th>Contato</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-reservations"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="dashboard-block">
+          <h2 class="dashboard-block__title">Compras online</h2>
+          <div class="dashboard-table-wrap">
+            <table class="dashboard-table">
+              <thead>
+                <tr>
+                  <th>Presente</th>
+                  <th>Convidado</th>
+                  <th>Valor</th>
+                  <th>Status</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-purchases"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="dashboard-block">
+          <h2 class="dashboard-block__title">Confirmações de presença</h2>
+          <div class="dashboard-table-wrap">
+            <table class="dashboard-table">
+              <thead>
+                <tr>
+                  <th>Convidado</th>
+                  <th>Telefone</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-rsvps"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./assets/js/painel-noivos.js"></script>
+  </body>
+</html>

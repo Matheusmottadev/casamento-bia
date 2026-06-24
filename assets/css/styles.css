@@ -1546,6 +1546,94 @@ button {
   margin-top: 1.4rem;
 }
 
+.dashboard-page {
+  min-height: 100vh;
+  padding: 32px 18px 48px;
+  background:
+    radial-gradient(circle at top, rgba(208, 197, 176, 0.4), transparent 36%),
+    linear-gradient(180deg, #f6f0e9 0%, #efe7dc 100%);
+}
+
+.dashboard-shell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+  border: 1px solid rgba(107, 116, 66, 0.12);
+  border-radius: 26px;
+  background: rgba(251, 247, 242, 0.96);
+  box-shadow: 0 22px 60px rgba(34, 29, 21, 0.12);
+}
+
+.dashboard-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+  margin-top: 1.4rem;
+}
+
+.dashboard-metric {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(107, 116, 66, 0.12);
+}
+
+.dashboard-metric strong {
+  font-family: "trajanPro", serif;
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.dashboard-metric span {
+  color: var(--text-body);
+}
+
+.dashboard-block {
+  margin-top: 1.5rem;
+}
+
+.dashboard-block__title {
+  margin: 0 0 0.75rem;
+  font-family: "trajanPro", serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.dashboard-table-wrap {
+  overflow-x: auto;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(107, 116, 66, 0.12);
+}
+
+.dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.dashboard-table th,
+.dashboard-table td {
+  padding: 0.9rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(107, 116, 66, 0.1);
+}
+
+.dashboard-table th {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(101, 112, 67, 0.88);
+}
+
+.dashboard-table td {
+  color: var(--text);
+}
+
 .modal-open {
   overflow: hidden;
 }
