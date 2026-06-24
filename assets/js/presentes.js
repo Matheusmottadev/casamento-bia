@@ -542,13 +542,14 @@ if (purchaseGrid && reservationGrid) {
       const data = await response.json();
 
       if (!response.ok || !data.url) {
-        throw new Error(data.error || `HTTP ${response.status}`);
+        throw new Error(data.details || data.error || `HTTP ${response.status}`);
       }
 
       window.location.href = data.url;
     } catch (error) {
       console.error("Nao foi possivel iniciar o checkout do Mercado Pago.", error);
-      purchaseCheckoutFeedback.textContent = "Nao foi possivel iniciar o pagamento agora.";
+      const message = error instanceof Error ? error.message : "Nao foi possivel iniciar o pagamento agora.";
+      purchaseCheckoutFeedback.textContent = message;
     }
   }
 

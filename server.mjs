@@ -629,7 +629,9 @@ async function mercadopagoRequest(pathname, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data.message || data.error || `Mercado Pago HTTP ${response.status}`);
+    const details =
+      data.message || data.error_description || data.error || data.cause?.[0]?.description || `Mercado Pago HTTP ${response.status}`;
+    throw new Error(details);
   }
 
   return data;
@@ -915,7 +917,10 @@ const server = http.createServer(async (request, response) => {
       });
     } catch (error) {
       console.error("Erro ao criar checkout do Mercado Pago:", error);
-      sendJson(response, 500, { error: "Nao foi possivel iniciar o pagamento agora." });
+      sendJson(response, 500, {
+        error: "Nao foi possivel iniciar o pagamento agora.",
+        details: error instanceof Error ? error.message : "Erro desconhecido no Mercado Pago.",
+      });
     }
     return;
   }
