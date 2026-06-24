@@ -30,7 +30,27 @@ const mimeTypes = {
   ".webp": "image/webp",
 };
 
-const databaseUrl = process.env.DATABASE_URL;
+function resolveDatabaseUrl() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  if (process.env.DATABASE_PRIVATE_URL) return process.env.DATABASE_PRIVATE_URL;
+  if (process.env.DATABASE_PUBLIC_URL) return process.env.DATABASE_PUBLIC_URL;
+  if (process.env.POSTGRES_URL) return process.env.POSTGRES_URL;
+  if (process.env.POSTGRES_URL_NON_POOLING) return process.env.POSTGRES_URL_NON_POOLING;
+
+  const host = process.env.PGHOST;
+  const portValue = process.env.PGPORT || "5432";
+  const user = process.env.PGUSER;
+  const password = process.env.PGPASSWORD;
+  const database = process.env.PGDATABASE;
+
+  if (host && user && password && database) {
+    return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${portValue}/${database}`;
+  }
+
+  return "";
+}
+
+const databaseUrl = resolveDatabaseUrl();
 const shouldDisableSsl =
   process.env.PGSSLMODE === "disable" ||
   (typeof databaseUrl === "string" &&
@@ -47,7 +67,7 @@ const pool = databaseUrl
 
 async function query(text, params = []) {
   if (!pool) {
-    throw new Error("DATABASE_URL nao configurada.");
+    throw new Error("Banco PostgreSQL nao configurado. Defina DATABASE_URL, DATABASE_PRIVATE_URL, POSTGRES_URL ou PGHOST/PGUSER/PGPASSWORD/PGDATABASE.");
   }
 
   const result = await pool.query(text, params);
@@ -61,7 +81,7 @@ async function queryOne(text, params = []) {
 
 async function execute(text, params = []) {
   if (!pool) {
-    throw new Error("DATABASE_URL nao configurada.");
+    throw new Error("Banco PostgreSQL nao configurado. Defina DATABASE_URL, DATABASE_PRIVATE_URL, POSTGRES_URL ou PGHOST/PGUSER/PGPASSWORD/PGDATABASE.");
   }
 
   await pool.query(text, params);
@@ -69,7 +89,7 @@ async function execute(text, params = []) {
 
 async function ensureDatabase() {
   if (!pool) {
-    throw new Error("DATABASE_URL nao configurada.");
+    throw new Error("Banco PostgreSQL nao configurado. Defina DATABASE_URL, DATABASE_PRIVATE_URL, POSTGRES_URL ou PGHOST/PGUSER/PGPASSWORD/PGDATABASE.");
   }
 
   await execute(`
