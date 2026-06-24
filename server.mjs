@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import http from "node:http";
@@ -356,29 +355,6 @@ const server = http.createServer(async (request, response) => {
         }
       }
 
-      if (event.type === "payment_intent.succeeded") {
-        const paymentIntent = event.data.object;
-        const existingPurchases = await readPurchases();
-        const alreadyStored = existingPurchases.some((purchase) => purchase.paymentIntentId === paymentIntent.id);
-
-        if (!alreadyStored) {
-          await createPurchase({
-            id: Date.now(),
-            sessionId: "",
-            paymentIntentId: paymentIntent.id,
-            giftTitle: String(paymentIntent.metadata?.giftTitle || "Presente"),
-            amountTotal: Number(paymentIntent.amount_received || paymentIntent.amount || 0),
-            currency: String(paymentIntent.currency || "brl"),
-            firstName: String(paymentIntent.metadata?.firstName || ""),
-            lastName: String(paymentIntent.metadata?.lastName || ""),
-            paymentMethod: String(paymentIntent.metadata?.paymentMethod || ""),
-            phone: String(paymentIntent.metadata?.phone || ""),
-            paymentStatus: String(paymentIntent.status || ""),
-            createdAt: new Date().toISOString(),
-          });
-        }
-      }
-
       sendJson(response, 200, { received: true });
     } catch (error) {
       console.error("Erro ao processar webhook do Stripe:", error);
@@ -510,11 +486,11 @@ const server = http.createServer(async (request, response) => {
     return;
   }
 
-  if (requestUrl.pathname === "/api/purchase-payment-intent" && request.method === "POST") {
+  if (requestUrl.pathname === "/api/purchase-checkout-session" && request.method === "POST") {
     try {
       const stripe = getStripeClient();
 
-      if (!stripe || !process.env.STRIPE_PUBLISHABLE_KEY) {
+      if (!stripe) {
         sendJson(response, 503, { error: "Stripe nao configurado no servidor." });
         return;
       }
@@ -534,9 +510,11 @@ const server = http.createServer(async (request, response) => {
         return;
       }
 
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amountInCents,
-        currency: "brl",
+      const baseUrl = getAppBaseUrl(request);
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        success_url: `${baseUrl}/compra-sucesso.html?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}/compra-cancelada.html`,
         payment_method_types: ["card"],
         payment_method_options: {
           card: {
@@ -545,6 +523,19 @@ const server = http.createServer(async (request, response) => {
             },
           },
         },
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: "brl",
+              unit_amount: amountInCents,
+              product_data: {
+                name: giftTitle,
+                description: `Presente da lista de casamento para ${firstName} ${lastName}`.slice(0, 255),
+              },
+            },
+          },
+        ],
         metadata: {
           giftTitle,
           priceLabel,
@@ -553,48 +544,45 @@ const server = http.createServer(async (request, response) => {
           paymentMethod,
           phone,
         },
-        description: `Presente da lista de casamento para ${firstName} ${lastName}`.slice(0, 255),
       });
 
       sendJson(response, 200, {
-        clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id,
-        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
-        amountTotal: paymentIntent.amount,
-        currency: paymentIntent.currency,
+        url: session.url,
+        sessionId: session.id,
       });
     } catch (error) {
-      console.error("Erro ao criar PaymentIntent do Stripe:", error);
+      console.error("Erro ao criar sessao de checkout do Stripe:", error);
       sendJson(response, 500, { error: "Nao foi possivel iniciar o pagamento." });
     }
     return;
   }
 
-  if (requestUrl.pathname === "/api/payment-intent-status" && request.method === "GET") {
+  if (requestUrl.pathname === "/api/checkout-session" && request.method === "GET") {
     try {
       const stripe = getStripeClient();
-      const paymentIntentId = String(requestUrl.searchParams.get("payment_intent") || "").trim();
+      const sessionId = String(requestUrl.searchParams.get("session_id") || "").trim();
 
       if (!stripe) {
         sendJson(response, 503, { error: "Stripe nao configurado no servidor." });
         return;
       }
 
-      if (!paymentIntentId) {
-        sendJson(response, 400, { error: "payment_intent obrigatorio." });
+      if (!sessionId) {
+        sendJson(response, 400, { error: "session_id obrigatorio." });
         return;
       }
 
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
       sendJson(response, 200, {
-        id: paymentIntent.id,
-        paymentStatus: paymentIntent.status,
-        amountTotal: paymentIntent.amount_received || paymentIntent.amount || 0,
-        currency: paymentIntent.currency || "brl",
-        giftTitle: paymentIntent.metadata?.giftTitle || "Presente",
+        id: session.id,
+        paymentStatus: session.payment_status,
+        customerEmail: session.customer_details?.email || "",
+        amountTotal: session.amount_total || 0,
+        currency: session.currency || "brl",
+        giftTitle: session.metadata?.giftTitle || "Presente",
       });
     } catch (error) {
-      console.error("Erro ao consultar PaymentIntent do Stripe:", error);
+      console.error("Erro ao consultar sessao do Stripe:", error);
       sendJson(response, 500, { error: "Nao foi possivel consultar o pagamento." });
     }
     return;

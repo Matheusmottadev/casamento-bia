@@ -1546,39 +1546,6 @@ button {
   margin-top: 1.4rem;
 }
 
-.payment-page {
-  text-align: left;
-}
-
-.payment-page .status-card__eyebrow,
-.payment-page .status-card__title,
-.payment-page .status-card__copy {
-  text-align: center;
-}
-
-.payment-form {
-  display: grid;
-  gap: 1rem;
-  margin-top: 1.25rem;
-}
-
-#payment-element {
-  padding: 1rem;
-  border: 1px solid rgba(107, 116, 66, 0.14);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.88);
-}
-
-.payment-form__feedback {
-  min-height: 1.35rem;
-  margin: 0;
-  text-align: center;
-}
-
-.payment-form__submit {
-  width: 100%;
-}
-
 .modal-open {
   overflow: hidden;
 }
