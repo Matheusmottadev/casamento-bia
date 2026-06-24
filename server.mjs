@@ -31,13 +31,17 @@ const mimeTypes = {
 };
 
 const databaseUrl = process.env.DATABASE_URL;
+const shouldDisableSsl =
+  process.env.PGSSLMODE === "disable" ||
+  (typeof databaseUrl === "string" &&
+    (databaseUrl.includes("localhost") ||
+      databaseUrl.includes("127.0.0.1") ||
+      databaseUrl.includes(".railway.internal") ||
+      databaseUrl.includes(".internal")));
 const pool = databaseUrl
   ? new Pool({
       connectionString: databaseUrl,
-      ssl:
-        process.env.PGSSLMODE === "disable" || databaseUrl.includes("localhost")
-          ? false
-          : { rejectUnauthorized: false },
+      ssl: shouldDisableSsl ? false : { rejectUnauthorized: false },
     })
   : null;
 
