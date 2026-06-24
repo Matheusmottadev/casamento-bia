@@ -46,16 +46,22 @@
         </button>
       </header>
 
-      <nav class="mobile-menu" id="mobile-menu" aria-label="Menu mobile" hidden>
-        <a href="#top">Páginas</a>
-        <a href="#paginas">Página inicial</a>
-        <a href="#historia">Nossa história</a>
-        <a href="#mensagens">Mensagens</a>
-        <a href="#cerimonia">Cerimônia</a>
-        <a href="#festa">Festa</a>
-        <a href="./presentes.html">Presentes de casamento</a>
-        <button class="mobile-menu__action" type="button" data-open-rsvp="true">Confirmar presença</button>
-      </nav>
+      <div class="mobile-menu" id="mobile-menu" aria-hidden="true" hidden>
+        <button class="mobile-menu__backdrop" type="button" data-close-menu="true" aria-label="Fechar menu"></button>
+        <nav class="mobile-menu__panel" aria-label="Menu mobile">
+          <div class="mobile-menu__header">
+            <span class="mobile-menu__eyebrow">Menu</span>
+            <button class="mobile-menu__close" type="button" data-close-menu="true" aria-label="Fechar menu">×</button>
+          </div>
+          <div class="mobile-menu__links">
+            <a href="#paginas">Página inicial</a>
+            <a href="#historia">Nossa história</a>
+            <a href="#mensagens">Mensagens</a>
+            <a href="./presentes.html">Presentes de casamento</a>
+            <button class="mobile-menu__action" type="button" data-open-rsvp="true">Confirmar presença</button>
+          </div>
+        </nav>
+      </div>
 
       <main id="top">
         <section class="hero" id="paginas">

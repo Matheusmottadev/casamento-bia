@@ -343,7 +343,22 @@ function setMenuState(isOpen) {
   if (!menuToggle || !mobileMenu) return;
 
   menuToggle.setAttribute("aria-expanded", String(isOpen));
-  mobileMenu.hidden = !isOpen;
+  mobileMenu.setAttribute("aria-hidden", String(!isOpen));
+
+  if (isOpen) {
+    mobileMenu.hidden = false;
+    document.body.classList.add("modal-open");
+    window.requestAnimationFrame(() => {
+      mobileMenu.classList.add("mobile-menu--visible");
+    });
+    return;
+  }
+
+  mobileMenu.classList.remove("mobile-menu--visible");
+  document.body.classList.remove("modal-open");
+  window.setTimeout(() => {
+    mobileMenu.hidden = true;
+  }, 340);
 }
 
 function setDesktopPagesMenuState(isOpen) {
@@ -439,6 +454,10 @@ mobileMenu?.querySelectorAll("a").forEach((link) => {
   link.addEventListener("click", () => setMenuState(false));
 });
 
+mobileMenu?.querySelectorAll("[data-close-menu='true']").forEach((trigger) => {
+  trigger.addEventListener("click", () => setMenuState(false));
+});
+
 desktopNavGroup?.querySelectorAll(".desktop-nav__submenu a").forEach((link) => {
   link.addEventListener("click", () => setDesktopPagesMenuState(false));
 });
@@ -477,6 +496,7 @@ document.addEventListener("click", (event) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    setMenuState(false);
     setDesktopPagesMenuState(false);
     closeRsvpModal();
   }
