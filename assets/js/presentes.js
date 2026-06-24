@@ -27,8 +27,12 @@ const purchaseFirstName = document.querySelector("#purchase-first-name");
 const purchaseLastName = document.querySelector("#purchase-last-name");
 const purchasePhone = document.querySelector("#purchase-phone");
 const giftToast = document.querySelector("#gift-toast");
+const purchaseLoadMore = document.querySelector("#purchase-load-more");
+const reservationLoadMore = document.querySelector("#reservation-load-more");
 
 if (purchaseGrid && reservationGrid) {
+  const MOBILE_GIFTS_BATCH_SIZE = 6;
+
   const giftsViewState = {
     currentView: "purchase",
   };
@@ -36,111 +40,103 @@ if (purchaseGrid && reservationGrid) {
   const purchaseGifts = [
     {
       id: "gym-annual",
-      emoji: "🏋️",
-      emojiClass: "gift-card__emoji--gym",
+      image: "./assets/images/gifts/purchase/gym-annual.jpg",
       title: "Academia para os noivos entrarem em forma depois da lua de mel",
       price: "R$ 2.388,00",
     },
     {
       id: "magic-mop",
-      emoji: "🧽",
-      emojiClass: "gift-card__emoji--mop",
+      image: "./assets/images/gifts/purchase/magic-mop.jpg",
       title: "Acessório de última geração para cuidar da casa sem perder a pose",
       price: "R$ 128,26",
     },
     {
       id: "industrial-nail",
-      emoji: "🛠️",
-      emojiClass: "gift-card__emoji--tool",
+      image: "./assets/images/gifts/purchase/industrial-nail.jpg",
       title: "Acessório para cortar a unha do dedão do noivo com precisão industrial",
       price: "R$ 477,76",
     },
     {
       id: "fondue",
-      emoji: "🍲",
-      emojiClass: "gift-card__emoji--fondue",
+      image: "./assets/images/gifts/purchase/fondue.jpg",
       title: "Aparelho de fondue para noites românticas e fofocas bem servidas",
       price: "R$ 858,09",
     },
     {
       id: "plates",
-      emoji: "🍽️",
+      image: "./assets/images/gifts/purchase/plates.jpg",
       title: "Jogo de pratos chique para o casal fingir que janta assim todo dia",
       price: "R$ 312,40",
     },
     {
       id: "wine-cellar",
-      emoji: "🍷",
-      emojiClass: "gift-card__emoji--wine",
+      image: "./assets/images/gifts/purchase/wine-cellar.jpg",
       title: "Adega para o casal organizar os vinhos e a vida em uma mesma prateleira",
       price: "R$ 649,90",
     },
     {
       id: "airfryer",
-      emoji: "🍟",
-      emojiClass: "gift-card__emoji--airfryer",
+      image: "./assets/images/gifts/purchase/airfryer.jpg",
       title: "Air fryer oficial das visitas inesperadas e da batata frita de madrugada",
       price: "R$ 389,70",
     },
     {
       id: "robot-vacuum",
-      emoji: "🤖",
-      emojiClass: "gift-card__emoji--vacuum",
+      image: "./assets/images/gifts/purchase/robot-vacuum.jpg",
       title: "Robô aspirador para limpar o chão enquanto o casal ignora a bagunça",
       price: "R$ 1.199,00",
     },
     {
       id: "coffee",
-      emoji: "☕",
+      image: "./assets/images/gifts/purchase/coffee.jpg",
       title: "Cafeteira para manter o romance vivo antes de qualquer conversa séria",
       price: "R$ 284,55",
     },
     {
       id: "bed-linen",
-      emoji: "🛌",
+      image: "./assets/images/gifts/purchase/bed-linen.jpg",
       title: "Jogo de cama premium para domingos de preguiça profissional",
       price: "R$ 459,80",
     },
     {
       id: "travel-help",
-      emoji: "✈️",
-      emojiClass: "gift-card__emoji--travel",
+      image: "./assets/images/gifts/purchase/travel-help.jpg",
       title: "Ajuda estratégica para a próxima viagem e para o casal sumir um pouco",
       price: "R$ 720,00",
     },
     {
       id: "market-basket",
-      emoji: "🧺",
+      image: "./assets/images/gifts/purchase/market-basket.jpg",
       title: "Cesta de mercado para a despensa ficar cheia e o amor também",
       price: "R$ 215,35",
     },
     {
       id: "therapy-retreat",
-      emoji: "🧘",
+      image: "./assets/images/gifts/purchase/therapy-retreat.jpg",
       title: "Retiro anti-DR premium para o casal respirar fundo e continuar se amando",
       price: "R$ 1.480,00",
     },
     {
       id: "snore-proof",
-      emoji: "😴",
+      image: "./assets/images/gifts/purchase/snore-proof.jpg",
       title: "Kit de sobrevivência para ronco matrimonial com tecnologia e paciência",
       price: "R$ 1.189,00",
     },
     {
       id: "luxury-massage",
-      emoji: "💆",
+      image: "./assets/images/gifts/purchase/luxury-massage.jpg",
       title: "Sessão deluxe de massagem para desestressar depois de escolher cortina",
       price: "R$ 1.320,00",
     },
     {
       id: "mega-ac",
-      emoji: "❄️",
+      image: "./assets/images/gifts/purchase/mega-ac.jpg",
       title: "Ar-condicionado poderoso para esfriar o clima antes da primeira briguinha",
       price: "R$ 2.149,90",
     },
     {
       id: "custom-gift",
-      emoji: "🎁",
+      image: "./assets/images/gifts/purchase/custom-gift.jpg",
       title: "Personalizado para quem quiser escolher nome e valor do presente",
       price: "Você define",
       isCustom: true,
@@ -221,6 +217,12 @@ if (purchaseGrid && reservationGrid) {
     selectedGiftAmount: "",
   };
 
+  const paginationState = {
+    purchaseVisibleCount: MOBILE_GIFTS_BATCH_SIZE,
+    reservationVisibleCount: MOBILE_GIFTS_BATCH_SIZE,
+    isMobile: window.innerWidth < 768,
+  };
+
   function escapeHtml(value) {
     return String(value)
       .replaceAll("&", "&amp;")
@@ -252,6 +254,20 @@ if (purchaseGrid && reservationGrid) {
 
   function getActiveGiftsPanel() {
     return giftsViewState.currentView === "purchase" ? purchasePanel : reservationPanel;
+  }
+
+  function updateLoadMoreButton(button, hasMore) {
+    if (!button) return;
+
+    button.hidden = !paginationState.isMobile || !hasMore;
+  }
+
+  function getVisibleGifts(items, visibleCount) {
+    if (!paginationState.isMobile) {
+      return items;
+    }
+
+    return items.slice(0, visibleCount);
   }
 
   function resizeGiftsStage(immediate = false) {
@@ -295,12 +311,18 @@ if (purchaseGrid && reservationGrid) {
   }
 
   function renderPurchaseGifts() {
-    purchaseGrid.innerHTML = purchaseGifts
+    const visiblePurchaseGifts = getVisibleGifts(purchaseGifts, paginationState.purchaseVisibleCount);
+
+    purchaseGrid.innerHTML = visiblePurchaseGifts
       .map(
         (gift) => `
           <article class="gift-card">
             <div class="gift-card__media">
-              <span class="gift-card__emoji ${gift.emojiClass || ""}" aria-hidden="true">${gift.emoji}</span>
+              ${
+                gift.image
+                  ? `<img class="gift-card__photo" src="${gift.image}" alt="${escapeHtml(gift.title)}" loading="lazy" decoding="async" />`
+                  : `<span class="gift-card__emoji ${gift.emojiClass || ""}" aria-hidden="true">${gift.emoji}</span>`
+              }
             </div>
             <div class="gift-card__body">
               <p class="gift-card__title">${escapeHtml(gift.title)}</p>
@@ -313,6 +335,8 @@ if (purchaseGrid && reservationGrid) {
         `,
       )
       .join("");
+
+    updateLoadMoreButton(purchaseLoadMore, visiblePurchaseGifts.length < purchaseGifts.length);
 
     if (giftsViewState.currentView === "purchase") {
       resizeGiftsStage(true);
@@ -330,13 +354,16 @@ if (purchaseGrid && reservationGrid) {
           </div>
         </div>
       `;
+      updateLoadMoreButton(reservationLoadMore, false);
       if (giftsViewState.currentView === "reservation") {
         resizeGiftsStage(true);
       }
       return;
     }
 
-    reservationGrid.innerHTML = availableGifts
+    const visibleReservationGifts = getVisibleGifts(availableGifts, paginationState.reservationVisibleCount);
+
+    reservationGrid.innerHTML = visibleReservationGifts
       .map((gift) => {
         const remaining = gift.quantity - getReservedCount(gift.id);
         const availabilityText = remaining > 1 ? `${remaining} disponiveis` : "Ultima unidade";
@@ -369,6 +396,8 @@ if (purchaseGrid && reservationGrid) {
       })
       .join("");
 
+    updateLoadMoreButton(reservationLoadMore, visibleReservationGifts.length < availableGifts.length);
+
     if (giftsViewState.currentView === "reservation") {
       resizeGiftsStage(true);
     }
@@ -394,6 +423,7 @@ if (purchaseGrid && reservationGrid) {
           </div>
         </div>
       `;
+      updateLoadMoreButton(reservationLoadMore, false);
     }
   }
 
@@ -663,6 +693,14 @@ if (purchaseGrid && reservationGrid) {
   customPurchaseForm?.addEventListener("submit", submitCustomPurchase);
   purchaseCheckoutClose?.addEventListener("click", closePurchaseCheckoutModal);
   purchaseCheckoutForm?.addEventListener("submit", submitPurchaseCheckout);
+  purchaseLoadMore?.addEventListener("click", () => {
+    paginationState.purchaseVisibleCount += MOBILE_GIFTS_BATCH_SIZE;
+    renderPurchaseGifts();
+  });
+  reservationLoadMore?.addEventListener("click", () => {
+    paginationState.reservationVisibleCount += MOBILE_GIFTS_BATCH_SIZE;
+    renderReservationGifts();
+  });
   customPurchaseValue?.addEventListener("blur", () => {
     const amount = parseCurrencyValue(customPurchaseValue.value);
 
@@ -710,6 +748,16 @@ if (purchaseGrid && reservationGrid) {
   });
 
   window.addEventListener("resize", () => {
+    const nextIsMobile = window.innerWidth < 768;
+
+    if (nextIsMobile !== paginationState.isMobile) {
+      paginationState.isMobile = nextIsMobile;
+      paginationState.purchaseVisibleCount = MOBILE_GIFTS_BATCH_SIZE;
+      paginationState.reservationVisibleCount = MOBILE_GIFTS_BATCH_SIZE;
+      renderPurchaseGifts();
+      renderReservationGifts();
+    }
+
     resizeGiftsStage(true);
   });
 

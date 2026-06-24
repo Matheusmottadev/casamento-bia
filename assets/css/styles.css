@@ -1168,6 +1168,7 @@ button {
 
 .gifts-grid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -1314,6 +1315,27 @@ button {
 .gift-card--empty .gift-card__body {
   min-height: 160px;
   place-content: center;
+}
+
+.gifts-load-more {
+  display: none;
+  width: min(100%, 240px);
+  margin: 1.15rem auto 0;
+  padding: 0.95rem 1.2rem;
+  border: 1px solid rgba(107, 116, 66, 0.18);
+  border-radius: 999px;
+  background: rgba(251, 247, 242, 0.98);
+  color: var(--text);
+  font-family: "trajanPro", serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 24px rgba(64, 56, 40, 0.06);
+  cursor: pointer;
+}
+
+.gifts-load-more[hidden] {
+  display: none;
 }
 
 .gift-modal {
@@ -1786,6 +1808,10 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 22px;
   }
+
+  .gifts-load-more {
+    display: none !important;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -1802,5 +1828,67 @@ button {
 
   .gift-card {
     padding: 1.65rem 1.65rem 1.75rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .gift-card {
+    gap: 0.9rem;
+    padding: 0.9rem 0.9rem 1rem;
+  }
+
+  .gift-card__body {
+    gap: 0.75rem;
+  }
+
+  .gift-card__title {
+    min-height: 4.2em;
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+
+  .gift-card--reservation .gift-card__title {
+    min-height: 3.6em;
+  }
+
+  .gift-card__note {
+    min-height: 0;
+    margin-top: -0.2rem;
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+
+  .gift-card__price {
+    font-size: 0.82rem;
+    line-height: 1.35;
+  }
+
+  .gift-card__badge {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.56rem;
+  }
+
+  .gift-card__button {
+    width: 100%;
+    min-width: 0;
+    padding-right: 0.8rem;
+    padding-left: 0.8rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+  }
+
+  .gift-card__swatch {
+    right: 0.45rem;
+    bottom: 0.45rem;
+    width: 52px;
+    padding: 0.18rem;
+  }
+
+  .gift-card__swatch-label {
+    font-size: 0.4rem;
+  }
+
+  .gifts-load-more {
+    display: block;
   }
 }
