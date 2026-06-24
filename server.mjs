@@ -3,7 +3,6 @@ import { promises as fs } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import Stripe from "stripe";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,7 +28,6 @@ const mimeTypes = {
 };
 
 let writeQueue = Promise.resolve();
-let stripeClient;
 
 async function ensureVisitorsStore() {
   await fs.mkdir(dataDir, { recursive: true });
@@ -199,8 +197,12 @@ async function createPurchase(purchase) {
     const purchases = await readPurchases();
     purchases.unshift({
       id: purchase.id ?? Date.now(),
-      sessionId: purchase.sessionId,
+      sessionId: purchase.sessionId ?? "",
       paymentIntentId: purchase.paymentIntentId ?? "",
+      provider: purchase.provider ?? "",
+      externalReference: purchase.externalReference ?? "",
+      gatewayPreferenceId: purchase.gatewayPreferenceId ?? "",
+      gatewayPaymentId: purchase.gatewayPaymentId ?? "",
       giftTitle: purchase.giftTitle.slice(0, 160),
       amountTotal: purchase.amountTotal,
       currency: purchase.currency.slice(0, 12),
@@ -211,6 +213,46 @@ async function createPurchase(purchase) {
       paymentStatus: purchase.paymentStatus.slice(0, 40),
       createdAt: purchase.createdAt,
     });
+    await fs.writeFile(purchasesFile, JSON.stringify({ purchases }, null, 2));
+    return purchases;
+  });
+
+  return writeQueue;
+}
+
+async function upsertPurchaseByExternalReference(externalReference, nextPurchase) {
+  writeQueue = writeQueue.then(async () => {
+    const purchases = await readPurchases();
+    const normalizedReference = externalReference.slice(0, 120);
+    const index = purchases.findIndex((purchase) => purchase.externalReference === normalizedReference);
+    const normalizedPurchase = {
+      id: nextPurchase.id ?? Date.now(),
+      sessionId: nextPurchase.sessionId ?? "",
+      paymentIntentId: nextPurchase.paymentIntentId ?? "",
+      provider: nextPurchase.provider ?? "",
+      externalReference: normalizedReference,
+      gatewayPreferenceId: nextPurchase.gatewayPreferenceId ?? "",
+      gatewayPaymentId: nextPurchase.gatewayPaymentId ?? "",
+      giftTitle: nextPurchase.giftTitle.slice(0, 160),
+      amountTotal: nextPurchase.amountTotal,
+      currency: nextPurchase.currency.slice(0, 12),
+      firstName: nextPurchase.firstName.slice(0, 80),
+      lastName: nextPurchase.lastName.slice(0, 80),
+      paymentMethod: nextPurchase.paymentMethod.slice(0, 80),
+      phone: nextPurchase.phone.slice(0, 40),
+      paymentStatus: nextPurchase.paymentStatus.slice(0, 40),
+      createdAt: nextPurchase.createdAt,
+    };
+
+    if (index >= 0) {
+      purchases[index] = {
+        ...purchases[index],
+        ...normalizedPurchase,
+      };
+    } else {
+      purchases.unshift(normalizedPurchase);
+    }
+
     await fs.writeFile(purchasesFile, JSON.stringify({ purchases }, null, 2));
     return purchases;
   });
@@ -277,16 +319,34 @@ function parseCurrencyToCents(value) {
   return Math.round(amount * 100);
 }
 
-function getStripeClient() {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    return null;
+function formatCurrencyFromCents(amountInCents) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format((Number(amountInCents) || 0) / 100);
+}
+
+async function mercadopagoRequest(pathname, options = {}) {
+  if (!process.env.MP_ACCESS_TOKEN) {
+    throw new Error("Mercado Pago nao configurado.");
   }
 
-  if (!stripeClient) {
-    stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const response = await fetch(`https://api.mercadopago.com${pathname}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || data.error || `Mercado Pago HTTP ${response.status}`);
   }
 
-  return stripeClient;
+  return data;
 }
 
 async function serveStaticFile(response, pathname) {
@@ -313,55 +373,6 @@ async function serveStaticFile(response, pathname) {
 
 const server = http.createServer(async (request, response) => {
   const requestUrl = new URL(request.url || "/", `http://${request.headers.host}`);
-
-  if (requestUrl.pathname === "/api/stripe-webhook" && request.method === "POST") {
-    try {
-      const stripe = getStripeClient();
-      const signature = request.headers["stripe-signature"];
-
-      if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) {
-        sendJson(response, 503, { error: "Stripe webhook nao configurado." });
-        return;
-      }
-
-      if (typeof signature !== "string") {
-        sendJson(response, 400, { error: "Assinatura do webhook ausente." });
-        return;
-      }
-
-      const rawBody = await readRequestBody(request);
-      const event = stripe.webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET);
-
-      if (event.type === "checkout.session.completed") {
-        const session = event.data.object;
-        const existingPurchases = await readPurchases();
-        const alreadyStored = existingPurchases.some((purchase) => purchase.sessionId === session.id);
-
-        if (!alreadyStored) {
-          await createPurchase({
-            id: Date.now(),
-            sessionId: session.id,
-            paymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : "",
-            giftTitle: String(session.metadata?.giftTitle || "Presente personalizado"),
-            amountTotal: Number(session.amount_total || 0),
-            currency: String(session.currency || "brl"),
-            firstName: String(session.metadata?.firstName || ""),
-            lastName: String(session.metadata?.lastName || ""),
-            paymentMethod: String(session.metadata?.paymentMethod || ""),
-            phone: String(session.metadata?.phone || ""),
-            paymentStatus: String(session.payment_status || ""),
-            createdAt: new Date().toISOString(),
-          });
-        }
-      }
-
-      sendJson(response, 200, { received: true });
-    } catch (error) {
-      console.error("Erro ao processar webhook do Stripe:", error);
-      sendJson(response, 400, { error: "Webhook invalido." });
-    }
-    return;
-  }
 
   if (requestUrl.pathname === "/api/visitors") {
     try {
@@ -486,12 +497,63 @@ const server = http.createServer(async (request, response) => {
     return;
   }
 
-  if (requestUrl.pathname === "/api/purchase-checkout-session" && request.method === "POST") {
+  if (requestUrl.pathname === "/api/mercado-pago-webhook" && request.method === "POST") {
     try {
-      const stripe = getStripeClient();
+      const rawBody = await readRequestBody(request);
+      const payload = JSON.parse(rawBody || "{}");
+      const paymentId =
+        String(payload?.data?.id || requestUrl.searchParams.get("data.id") || requestUrl.searchParams.get("id") || "").trim();
+      const topic = String(payload?.type || requestUrl.searchParams.get("type") || "").trim();
 
-      if (!stripe) {
-        sendJson(response, 503, { error: "Stripe nao configurado no servidor." });
+      if (!paymentId || (topic && topic !== "payment")) {
+        sendJson(response, 200, { received: true, ignored: true });
+        return;
+      }
+
+      const payment = await mercadopagoRequest(`/v1/payments/${encodeURIComponent(paymentId)}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const externalReference = String(payment.external_reference || "").trim();
+
+      if (externalReference) {
+        await upsertPurchaseByExternalReference(externalReference, {
+          id: Date.now(),
+          sessionId: "",
+          paymentIntentId: "",
+          provider: "mercado_pago",
+          externalReference,
+          gatewayPreferenceId: String(payment.order?.id || payment.metadata?.preference_id || ""),
+          gatewayPaymentId: String(payment.id || ""),
+          giftTitle: String(
+            payment.additional_info?.items?.[0]?.title || payment.description || payment.metadata?.gift_title || "Presente",
+          ),
+          amountTotal: Number(Math.round((Number(payment.transaction_amount) || 0) * 100)),
+          currency: String(payment.currency_id || "BRL").toLowerCase(),
+          firstName: String(payment.metadata?.first_name || ""),
+          lastName: String(payment.metadata?.last_name || ""),
+          paymentMethod: String(payment.payment_method_id || "mercado_pago"),
+          phone: String(payment.metadata?.phone || ""),
+          paymentStatus: String(payment.status || ""),
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      sendJson(response, 200, { received: true });
+    } catch (error) {
+      console.error("Erro ao processar webhook do Mercado Pago:", error);
+      sendJson(response, 500, { error: "Nao foi possivel processar a notificacao." });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/purchase-mercado-pago" && request.method === "POST") {
+    try {
+      if (!process.env.MP_ACCESS_TOKEN) {
+        sendJson(response, 503, { error: "Mercado Pago nao configurado no servidor." });
         return;
       }
 
@@ -501,89 +563,102 @@ const server = http.createServer(async (request, response) => {
       const priceLabel = String(payload.priceLabel || "").trim();
       const firstName = String(payload.firstName || "").trim();
       const lastName = String(payload.lastName || "").trim();
-      const paymentMethod = String(payload.paymentMethod || "").trim();
       const phone = String(payload.phone || "").trim();
       const amountInCents = parseCurrencyToCents(payload.amount);
 
-      if (!giftTitle || !firstName || !lastName || !paymentMethod || !phone || !Number.isFinite(amountInCents)) {
-        sendJson(response, 400, { error: "Dados invalidos para iniciar o checkout." });
+      if (!giftTitle || !firstName || !lastName || !phone || !Number.isFinite(amountInCents)) {
+        sendJson(response, 400, { error: "Dados invalidos para iniciar o pagamento." });
         return;
       }
 
+      const externalReference = `gift_${Date.now()}`;
       const baseUrl = getAppBaseUrl(request);
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        success_url: `${baseUrl}/compra-sucesso.html?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${baseUrl}/compra-cancelada.html`,
-        payment_method_types: ["card"],
-        payment_method_options: {
-          card: {
-            installments: {
-              enabled: true,
+      const preference = await mercadopagoRequest("/checkout/preferences", {
+        method: "POST",
+        body: JSON.stringify({
+          items: [
+            {
+              id: externalReference,
+              title: giftTitle,
+              quantity: 1,
+              currency_id: "BRL",
+              unit_price: amountInCents / 100,
+              description: `Presente da lista de casamento para ${firstName} ${lastName}`.slice(0, 255),
             },
+          ],
+          external_reference: externalReference,
+          notification_url: `${baseUrl}/api/mercado-pago-webhook`,
+          back_urls: {
+            success: `${baseUrl}/compra-sucesso.html`,
+            pending: `${baseUrl}/compra-sucesso.html`,
+            failure: `${baseUrl}/compra-cancelada.html`,
           },
-        },
-        line_items: [
-          {
-            quantity: 1,
-            price_data: {
-              currency: "brl",
-              unit_amount: amountInCents,
-              product_data: {
-                name: giftTitle,
-                description: `Presente da lista de casamento para ${firstName} ${lastName}`.slice(0, 255),
-              },
-            },
+          auto_return: "approved",
+          metadata: {
+            gift_title: giftTitle,
+            price_label: priceLabel,
+            first_name: firstName,
+            last_name: lastName,
+            phone,
           },
-        ],
-        metadata: {
-          giftTitle,
-          priceLabel,
-          firstName,
-          lastName,
-          paymentMethod,
-          phone,
-        },
+        }),
+      });
+
+      await upsertPurchaseByExternalReference(externalReference, {
+        id: Date.now(),
+        sessionId: "",
+        paymentIntentId: "",
+        provider: "mercado_pago",
+        externalReference,
+        gatewayPreferenceId: String(preference.id || ""),
+        gatewayPaymentId: "",
+        giftTitle: escapeHtml(giftTitle),
+        amountTotal: amountInCents,
+        currency: "brl",
+        firstName: escapeHtml(firstName),
+        lastName: escapeHtml(lastName),
+        paymentMethod: "mercado_pago_checkout_pro",
+        phone: escapeHtml(phone),
+        paymentStatus: "pending",
+        createdAt: new Date().toISOString(),
       });
 
       sendJson(response, 200, {
-        url: session.url,
-        sessionId: session.id,
+        url: preference.init_point,
+        externalReference,
       });
     } catch (error) {
-      console.error("Erro ao criar sessao de checkout do Stripe:", error);
-      sendJson(response, 500, { error: "Nao foi possivel iniciar o pagamento." });
+      console.error("Erro ao criar checkout do Mercado Pago:", error);
+      sendJson(response, 500, { error: "Nao foi possivel iniciar o pagamento agora." });
     }
     return;
   }
 
-  if (requestUrl.pathname === "/api/checkout-session" && request.method === "GET") {
+  if (requestUrl.pathname === "/api/purchase-status" && request.method === "GET") {
     try {
-      const stripe = getStripeClient();
-      const sessionId = String(requestUrl.searchParams.get("session_id") || "").trim();
+      const externalReference = String(requestUrl.searchParams.get("external_reference") || "").trim();
+      const paymentId = String(requestUrl.searchParams.get("payment_id") || "").trim();
+      const purchases = await readPurchases();
+      const purchase = purchases.find(
+        (entry) => entry.externalReference === externalReference || entry.gatewayPaymentId === paymentId,
+      );
 
-      if (!stripe) {
-        sendJson(response, 503, { error: "Stripe nao configurado no servidor." });
+      if (!purchase) {
+        sendJson(response, 404, { error: "Compra nao encontrada." });
         return;
       }
 
-      if (!sessionId) {
-        sendJson(response, 400, { error: "session_id obrigatorio." });
-        return;
-      }
-
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
       sendJson(response, 200, {
-        id: session.id,
-        paymentStatus: session.payment_status,
-        customerEmail: session.customer_details?.email || "",
-        amountTotal: session.amount_total || 0,
-        currency: session.currency || "brl",
-        giftTitle: session.metadata?.giftTitle || "Presente",
+        giftTitle: purchase.giftTitle,
+        amountTotal: purchase.amountTotal,
+        currency: purchase.currency || "brl",
+        paymentStatus: purchase.paymentStatus,
+        provider: purchase.provider || "mercado_pago",
+        paymentMethod: purchase.paymentMethod || "mercado_pago",
       });
     } catch (error) {
-      console.error("Erro ao consultar sessao do Stripe:", error);
-      sendJson(response, 500, { error: "Nao foi possivel consultar o pagamento." });
+      console.error("Erro ao consultar compra:", error);
+      sendJson(response, 500, { error: "Nao foi possivel consultar a compra." });
     }
     return;
   }

@@ -25,7 +25,6 @@ const purchaseCheckoutCopy = document.querySelector("#purchase-checkout-copy");
 const purchaseCheckoutFeedback = document.querySelector("#purchase-checkout-feedback");
 const purchaseFirstName = document.querySelector("#purchase-first-name");
 const purchaseLastName = document.querySelector("#purchase-last-name");
-const purchasePaymentMethod = document.querySelector("#purchase-payment-method");
 const purchasePhone = document.querySelector("#purchase-phone");
 const giftToast = document.querySelector("#gift-toast");
 
@@ -459,7 +458,7 @@ if (purchaseGrid && reservationGrid) {
     purchaseCheckoutFeedback.textContent = "";
 
     const details = priceLabel ? `${giftTitle} por ${priceLabel}` : giftTitle;
-    purchaseCheckoutCopy.textContent = `Preencha seus dados para concluir a compra de ${details}.`;
+    purchaseCheckoutCopy.textContent = `Preencha seus dados para concluir ${details} com Mercado Pago.`;
 
     purchaseCheckoutModal.hidden = false;
     document.body.classList.add("modal-open");
@@ -507,7 +506,6 @@ if (purchaseGrid && reservationGrid) {
     const formData = new FormData(purchaseCheckoutForm);
     const firstName = String(formData.get("firstName") || "").trim();
     const lastName = String(formData.get("lastName") || "").trim();
-    const paymentMethod = String(formData.get("paymentMethod") || "").trim();
     const phone = String(formData.get("phone") || "").trim();
 
     if (!firstName) {
@@ -520,20 +518,15 @@ if (purchaseGrid && reservationGrid) {
       return;
     }
 
-    if (!paymentMethod) {
-      purchaseCheckoutFeedback.textContent = "Escolhe a forma de pagamento.";
-      return;
-    }
-
     if (!phone) {
       purchaseCheckoutFeedback.textContent = "Coloca seu número de telefone.";
       return;
     }
 
     try {
-      purchaseCheckoutFeedback.textContent = "Redirecionando para o pagamento...";
+      purchaseCheckoutFeedback.textContent = "Redirecionando para o Mercado Pago...";
 
-      const response = await fetch("/api/purchase-checkout-session", {
+      const response = await fetch("/api/purchase-mercado-pago", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -542,7 +535,6 @@ if (purchaseGrid && reservationGrid) {
           amount: purchaseState.selectedGiftAmount,
           firstName,
           lastName,
-          paymentMethod,
           phone,
         }),
       });
@@ -555,7 +547,7 @@ if (purchaseGrid && reservationGrid) {
 
       window.location.href = data.url;
     } catch (error) {
-      console.error("Nao foi possivel iniciar o checkout do Stripe.", error);
+      console.error("Nao foi possivel iniciar o checkout do Mercado Pago.", error);
       purchaseCheckoutFeedback.textContent = "Nao foi possivel iniciar o pagamento agora.";
     }
   }
