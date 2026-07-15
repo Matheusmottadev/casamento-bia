@@ -16,7 +16,10 @@
   <body>
     <div class="page-shell">
       <header class="site-header site-header--solid">
-        <a class="brand" href="./index.html#top" aria-label="Voltar ao início">K <span>&</span> B</a>
+        <a class="brand" href="./index.html#top" aria-label="Voltar ao início">
+          <img class="brand__image brand__image--light" src="./assets/images/brand-kb-white.png" alt="Kaique e Beatriz" />
+          <img class="brand__image brand__image--solid" src="./assets/images/brand-kb.png" alt="Kaique e Beatriz" />
+        </a>
 
         <nav class="desktop-nav" aria-label="Navegação principal">
           <div class="desktop-nav__group">
@@ -25,7 +28,6 @@
             </button>
             <div class="desktop-nav__submenu" aria-label="Seções do site">
               <a href="./index.html#paginas">Início</a>
-              <a href="./index.html#historia-detalhes">Nossa história</a>
               <a href="./index.html#mensagens">Mensagens</a>
             </div>
           </div>
@@ -55,7 +57,6 @@
           </div>
           <div class="mobile-menu__links">
             <a href="./index.html#paginas">Página inicial</a>
-            <a href="./index.html#historia-detalhes">Nossa história</a>
             <a href="./index.html#mensagens">Mensagens</a>
             <a href="./presentes.html">Presentes de casamento</a>
             <button class="mobile-menu__action" type="button" data-open-rsvp="true">Confirmar presença</button>
@@ -80,6 +81,17 @@
               Se dispor
             </button>
           </div>
+
+          <section class="gifts-audio" aria-label="Volume da música ambiente">
+            <div class="gifts-audio__controls">
+              <button class="gifts-audio__toggle" id="gifts-audio-toggle" type="button" aria-pressed="false">Play</button>
+            </div>
+            <label class="gifts-audio__volume" for="gifts-audio-volume">
+              <span class="gifts-audio__volume-label">Volume</span>
+              <input class="gifts-audio__slider" id="gifts-audio-volume" type="range" min="0" max="100" value="8" />
+            </label>
+            <audio id="gifts-audio-player" preload="metadata"></audio>
+          </section>
 
           <div class="gifts-stage" id="gifts-stage">
             <section class="gifts-section gifts-panel gifts-panel--active" id="purchase-panel" aria-hidden="false">

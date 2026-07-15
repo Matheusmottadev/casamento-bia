@@ -29,20 +29,82 @@ const purchasePhone = document.querySelector("#purchase-phone");
 const giftToast = document.querySelector("#gift-toast");
 const purchaseLoadMore = document.querySelector("#purchase-load-more");
 const reservationLoadMore = document.querySelector("#reservation-load-more");
+const giftsAudioPlayer = document.querySelector("#gifts-audio-player");
+const giftsAudioToggle = document.querySelector("#gifts-audio-toggle");
+const giftsAudioVolume = document.querySelector("#gifts-audio-volume");
 
 if (purchaseGrid && reservationGrid) {
   const MOBILE_GIFTS_BATCH_SIZE = 6;
+  const giftsPlaylist = [
+    { title: "Levitating", src: "./assets/audio/levitating.mp3" },
+    { title: "24K Magic", src: "./assets/audio/24k-magic.mp3" },
+    { title: "Trap Queen", src: "./assets/audio/trap-queen.mp3" },
+    { title: "Don't Stop 'Til You Get Enough", src: "./assets/audio/dont-stop-til-you-get-enough.mp3" },
+  ];
 
   const giftsViewState = {
     currentView: "purchase",
   };
 
+  const audioState = {
+    currentTrackIndex: 0,
+    autoplayUnlocked: false,
+  };
+
   const purchaseGifts = [
     {
       id: "gym-annual",
-      image: "./assets/images/gifts/purchase/gym-annual.jpg",
-      title: "Academia para os noivos entrarem em forma depois da lua de mel",
+      image: "./assets/images/gifts/purchase/honeymoon-shape-gym-user.png",
+      title: "Academia para os noivos entrarem no shape depois da lua de mel",
       price: "R$ 2.388,00",
+    },
+    {
+      id: "helmet-against-rolling-pin",
+      image: "./assets/images/gifts/purchase/helmet-against-rolling-pin-user.png",
+      title: "Capacete contra rolo de macarrao",
+      price: "R$ 129,90",
+    },
+    {
+      id: "broken-couple-fund",
+      image: "./assets/images/gifts/purchase/broken-couple-fund-user.png",
+      title: "Vaquinha para ajudar os noivos quebrados",
+      price: "R$ 250,00",
+    },
+    {
+      id: "groom-massage-after-bill",
+      image: "./assets/images/gifts/purchase/groom-massage-after-bill-user.png",
+      title: "Massagem relaxante para o noivo depois de ver a conta do casamento",
+      price: "R$ 199,90",
+    },
+    {
+      id: "i-did-give-something",
+      image: "./assets/images/gifts/purchase/i-did-give-something-real.jpg",
+      title: "So para nao dizerem que eu nao dei nada",
+      price: "R$ 50,00",
+    },
+    {
+      id: "groom-cooking-course",
+      image: "./assets/images/gifts/purchase/groom-cooking-course-user.png",
+      title: "Curso de culinaria para o noivo",
+      price: "R$ 179,90",
+    },
+    {
+      id: "groom-forro-course",
+      image: "./assets/images/gifts/purchase/groom-forro-course-user.png",
+      title: "Curso de forro para o noivo",
+      price: "R$ 159,90",
+    },
+    {
+      id: "groom-games-collection",
+      image: "./assets/images/gifts/purchase/groom-games-collection-user.png",
+      title: "Colecao de jogos para diversao do noivo e tristeza da noiva",
+      price: "R$ 349,90",
+    },
+    {
+      id: "no-fight-controllers",
+      image: "./assets/images/gifts/purchase/no-fight-controllers-user.png",
+      title: "Conjunto de controles para nao dar briga",
+      price: "R$ 429,90",
     },
     {
       id: "magic-mop",
@@ -52,7 +114,7 @@ if (purchaseGrid && reservationGrid) {
     },
     {
       id: "industrial-nail",
-      image: "./assets/images/gifts/purchase/industrial-nail.jpg",
+      image: "./assets/images/gifts/purchase/industrial-nail-user.png",
       title: "Acessório para cortar a unha do dedão do noivo com precisão industrial",
       price: "R$ 477,76",
     },
@@ -76,7 +138,7 @@ if (purchaseGrid && reservationGrid) {
     },
     {
       id: "airfryer",
-      image: "./assets/images/gifts/purchase/airfryer.jpg",
+      image: "./assets/images/gifts/purchase/airfryer-user.png",
       title: "Air fryer oficial das visitas inesperadas e da batata frita de madrugada",
       price: "R$ 389,70",
     },
@@ -100,7 +162,7 @@ if (purchaseGrid && reservationGrid) {
     },
     {
       id: "travel-help",
-      image: "./assets/images/gifts/purchase/travel-help.jpg",
+      image: "./assets/images/gifts/purchase/travel-help-beach.png",
       title: "Ajuda estratégica para a próxima viagem e para o casal sumir um pouco",
       price: "R$ 720,00",
     },
@@ -118,37 +180,92 @@ if (purchaseGrid && reservationGrid) {
     },
     {
       id: "snore-proof",
-      image: "./assets/images/gifts/purchase/snore-proof.jpg",
+      image: "./assets/images/gifts/purchase/snore-proof-user.png",
       title: "Kit de sobrevivência para ronco matrimonial com tecnologia e paciência",
       price: "R$ 1.189,00",
     },
     {
       id: "luxury-massage",
-      image: "./assets/images/gifts/purchase/luxury-massage.jpg",
+      image: "./assets/images/gifts/purchase/luxury-massage-user.png",
       title: "Sessão deluxe de massagem para desestressar depois de escolher cortina",
       price: "R$ 1.320,00",
     },
     {
       id: "mega-ac",
-      image: "./assets/images/gifts/purchase/mega-ac.jpg",
+      image: "./assets/images/gifts/purchase/mega-ac-user.png",
       title: "Ar-condicionado poderoso para esfriar o clima antes da primeira briguinha",
       price: "R$ 2.149,90",
     },
     {
+      id: "bridal-rolling-pin",
+      image: "./assets/images/gifts/purchase/bridal-rolling-pin-real.jpg",
+      title: "Rolo de macarrao pra noiva utilizar quando necessario",
+      price: "R$ 89,90",
+    },
+    {
+      id: "bride-alarm",
+      image: "./assets/images/gifts/purchase/bride-alarm-user.png",
+      title: "Despertador da Noiva (Necessario)",
+      price: "R$ 69,90",
+    },
+    {
+      id: "bride-makeup",
+      image: "./assets/images/gifts/purchase/bride-makeup-user.png",
+      title: "Ajuda com a make da noiva",
+      price: "R$ 579,90",
+    },
+    {
+      id: "white-dress-pass",
+      image: "./assets/images/gifts/purchase/white-dress-pass-user.png",
+      title: "Vale ir de Branco pro casamento",
+      price: "R$ 10.000,00",
+    },
+    {
+      id: "buffet-first-pass",
+      title: "Vale ser o primeiro do Buffet",
+      price: "R$ 999,90",
+      emoji: "🍽️",
+    },
+    {
+      id: "plus-one-intruder",
+      title: "Levar alguém que não foi convidado",
+      price: "R$ 1.699,90",
+      emoji: "🙈",
+    },
+    {
+      id: "groom-hair-and-beard",
+      title: "6 meses de cabelo e barba do noivo",
+      price: "R$ 79,90",
+      emoji: "💈",
+    },
+    {
       id: "custom-gift",
-      image: "./assets/images/gifts/purchase/custom-gift.jpg",
+      image: "./assets/images/gifts/purchase/custom-gift-user.png",
       title: "Personalizado para quem quiser escolher nome e valor do presente",
       price: "Você define",
       isCustom: true,
     },
   ];
 
-  const woodFinishLabel = "Madeira sugerida: Fresno Aveiro";
+  const woodFinishLabel = "Acabamento sugerido";
   const woodFinishSwatch = "./assets/images/gifts/real/fresno-aveiro.png";
+  const goldSwatch = "linear-gradient(135deg, #fff2b8 0%, #d6b14d 42%, #a97c1a 100%)";
+  const stainlessSteelSwatch = "linear-gradient(135deg, #f4f4f4 0%, #d4d7db 48%, #9fa6ad 100%)";
+  const blackStainlessSteelSwatch = "linear-gradient(135deg, #e7eaee 0%, #bac0c7 45%, #1f2023 46%, #111214 100%)";
+  const whiteSwatch = "#f6f5f1";
 
   const reservationGifts = [
     { id: "air-conditioner", image: "./assets/images/gifts/real/air-conditioner.jpg", title: "Ar-condicionado", quantity: 1 },
     { id: "heater", image: "./assets/images/gifts/real/heater.jpg", title: "Aquecedor", quantity: 1 },
+    {
+      id: "stainless-steel-cookware",
+      image: "./assets/images/gifts/real/stainless-steel-cookware.png",
+      title: "Jogo de Panela de Inox",
+      quantity: 1,
+      note: "Cor sugerida",
+      swatchStyle: stainlessSteelSwatch,
+    },
+    { id: "stone-cookware", image: "./assets/images/gifts/real/stone-cookware.png", title: "Jogo de Panela de Pedra", quantity: 1 },
     {
       id: "kitchen-cabinet",
       image: "./assets/images/gifts/real/kitchen-cabinet.jpg",
@@ -157,16 +274,30 @@ if (purchaseGrid && reservationGrid) {
       note: woodFinishLabel,
       swatchImage: woodFinishSwatch,
     },
+    { id: "robot-vacuum", image: "./assets/images/gifts/real/robot-vacuum-user.png", title: "Robo Aspirador de Pó", quantity: 1 },
+    { id: "storage-bed", image: "./assets/images/gifts/purchase/bed-linen.jpg", title: "Cama com Baú", quantity: 1 },
     { id: "glass-kitchen-table", image: "./assets/images/gifts/real/glass-kitchen-table.jpg", title: "Mesa de vidro da cozinha", quantity: 1 },
+    { id: "television", image: "./assets/images/gifts/real/television.png", title: "Televisão", quantity: 1 },
     { id: "vacuum-cleaner", image: "./assets/images/gifts/real/vacuum-cleaner.jpg", title: "Aspirador de pó", quantity: 1 },
+    { id: "washing-machine", image: "./assets/images/gifts/real/washing-machine.png", title: "Maquina de Lavar", quantity: 1 },
     { id: "range-hood", image: "./assets/images/gifts/real/range-hood.jpg", title: "Exaustor", quantity: 1 },
-    { id: "electric-oven", image: "./assets/images/gifts/real/electric-oven.jpg", title: "Forno elétrico", quantity: 1 },
+    { id: "electric-oven", image: "./assets/images/gifts/real/electric-oven.png", title: "Forno elétrico", quantity: 1 },
+    { id: "rice-cooker", image: "./assets/images/gifts/real/rice-cooker.png", title: "Panela de Arroz Eletrica", quantity: 1 },
     { id: "alexa", image: "./assets/images/gifts/real/alexa.jpg", title: "Alexa", quantity: 1 },
     { id: "curtain", image: "./assets/images/gifts/real/curtain.jpg", title: "Cortina", quantity: 1 },
     { id: "coffee-maker", image: "./assets/images/gifts/real/coffee-maker.jpg", title: "Cafeteira", quantity: 1 },
+    { id: "toaster", image: "./assets/images/gifts/real/toaster.png", title: "Torradeira Americana Inox/Preta", quantity: 1, note: "Cor sugerida", swatchStyle: blackStainlessSteelSwatch },
+    { id: "blender", image: "./assets/images/gifts/real/blender.png", title: "Liquidificador Inox/Preto", quantity: 1, note: "Cor sugerida", swatchStyle: blackStainlessSteelSwatch },
+    { id: "microwave", image: "./assets/images/gifts/real/microwave.png", title: "Microondas Inox", quantity: 1, note: "Cor sugerida", swatchStyle: stainlessSteelSwatch },
+    { id: "mixer", image: "./assets/images/gifts/real/mixer.png", title: "Batedeira Inox/Preta", quantity: 1, note: "Cor sugerida", swatchStyle: blackStainlessSteelSwatch },
+    { id: "orange-juicer", image: "./assets/images/gifts/real/orange-juicer.png", title: "Espremedor Eletrico de Laranja", quantity: 1 },
+    { id: "gold-cutlery-set", image: "./assets/images/gifts/real/gold-cutlery-set.png", title: "Kit de Talheres em inox na cor dourada", quantity: 1, note: "Cor sugerida", swatchStyle: goldSwatch },
+    { id: "glass-baking-dishes", image: "./assets/images/gifts/real/glass-baking-dishes.png", title: "Conjunto de Assadeiras de Vidro Temperado", quantity: 1 },
+    { id: "porcelain-cups", image: "./assets/images/gifts/real/porcelain-cups.png", title: "Xícaras de Porcelana", quantity: 1 },
+    { id: "electric-pressure-cooker", image: "./assets/images/gifts/real/electric-pressure-cooker.png", title: "Panela de Pressão Elétrica", quantity: 1 },
     { id: "ps5", image: "./assets/images/gifts/real/ps5.jpg", title: "PS5", quantity: 1 },
     { id: "drill", image: "./assets/images/gifts/real/drill.jpg", title: "Parafusadeira Bosch", quantity: 1 },
-    { id: "shower", image: "./assets/images/gifts/real/shower.jpg", title: "Chuveiros", quantity: 1 },
+    { id: "shower", image: "./assets/images/gifts/real/shower.png", title: "Chuveiros", quantity: 1 },
     {
       id: "desk",
       image: "./assets/images/gifts/real/desk.jpg",
@@ -176,7 +307,7 @@ if (purchaseGrid && reservationGrid) {
       swatchImage: woodFinishSwatch,
     },
     { id: "ps5-controller", image: "./assets/images/gifts/real/ps5-controller.jpg", title: "Controle de PS5", quantity: 2 },
-    { id: "water-filter", image: "./assets/images/gifts/real/water-filter.jpg", title: "Filtro de água", quantity: 1 },
+    { id: "water-filter", image: "./assets/images/gifts/real/water-filter.jpg", title: "Purificador de Água", quantity: 1 },
     { id: "notebook", image: "./assets/images/gifts/real/notebook.jpg", title: "Notebook", quantity: 1 },
     { id: "american-kitchen-chair", image: "./assets/images/gifts/real/american-kitchen-chair.jpg", title: "Cadeira de cozinha americana", quantity: 4 },
     {
@@ -195,6 +326,7 @@ if (purchaseGrid && reservationGrid) {
       note: woodFinishLabel,
       swatchImage: woodFinishSwatch,
     },
+    { id: "wardrobe", image: "./assets/images/gifts/real/wardrobe.png", title: "Guarda Roupa", quantity: 1, note: "Cor sugerida", swatchColor: whiteSwatch },
     { id: "chandelier", image: "./assets/images/gifts/real/chandelier.jpg", title: "Lustre", quantity: 1 },
     {
       id: "tv-panel",
@@ -232,6 +364,15 @@ if (purchaseGrid && reservationGrid) {
       .replaceAll("'", "&#39;");
   }
 
+  function getGiftPlaceholder(title) {
+    return String(title || "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word[0]?.toUpperCase() || "")
+      .join("");
+  }
+
   function showGiftToast(message) {
     if (!giftToast) return;
 
@@ -250,6 +391,93 @@ if (purchaseGrid && reservationGrid) {
 
   function getReservedCount(giftId) {
     return reservationState.reservations.filter((item) => item.giftId === giftId).length;
+  }
+
+  function loadPlaylistTrack(trackIndex) {
+    if (!giftsAudioPlayer) return;
+
+    audioState.currentTrackIndex = (trackIndex + giftsPlaylist.length) % giftsPlaylist.length;
+    giftsAudioPlayer.src = giftsPlaylist[audioState.currentTrackIndex].src;
+    giftsAudioPlayer.load();
+  }
+
+  function syncAudioToggle() {
+    if (!giftsAudioToggle || !giftsAudioPlayer) return;
+
+    const isPlaying = !giftsAudioPlayer.paused;
+    giftsAudioToggle.textContent = isPlaying ? "Pause" : "Play";
+    giftsAudioToggle.setAttribute("aria-pressed", String(isPlaying));
+  }
+
+  async function playPlaylistTrack(trackIndex = audioState.currentTrackIndex) {
+    if (!giftsAudioPlayer) return;
+
+    if (giftsAudioPlayer.src !== new URL(giftsPlaylist[trackIndex].src, window.location.href).href) {
+      loadPlaylistTrack(trackIndex);
+    }
+
+    try {
+      await giftsAudioPlayer.play();
+      audioState.autoplayUnlocked = true;
+      syncAudioToggle();
+    } catch {
+      audioState.autoplayUnlocked = false;
+      syncAudioToggle();
+    }
+  }
+
+  function pausePlaylist() {
+    if (!giftsAudioPlayer) return;
+
+    giftsAudioPlayer.pause();
+    syncAudioToggle();
+  }
+
+  function playNextPlaylistTrack() {
+    loadPlaylistTrack(audioState.currentTrackIndex + 1);
+    playPlaylistTrack(audioState.currentTrackIndex);
+  }
+
+  function initPlaylist() {
+    if (!giftsAudioPlayer) return;
+
+    loadPlaylistTrack(0);
+    giftsAudioPlayer.volume = Number(giftsAudioVolume?.value || 8) / 100;
+
+    giftsAudioPlayer.addEventListener("ended", () => {
+      playNextPlaylistTrack();
+    });
+
+    giftsAudioPlayer.addEventListener("play", syncAudioToggle);
+    giftsAudioPlayer.addEventListener("pause", syncAudioToggle);
+
+    giftsAudioVolume?.addEventListener("input", () => {
+      if (!giftsAudioPlayer) return;
+      giftsAudioPlayer.volume = Number(giftsAudioVolume.value || 0) / 100;
+    });
+
+    giftsAudioToggle?.addEventListener("click", async () => {
+      if (!giftsAudioPlayer) return;
+
+      if (giftsAudioPlayer.paused) {
+        await playPlaylistTrack(audioState.currentTrackIndex);
+        return;
+      }
+
+      pausePlaylist();
+    });
+
+    playPlaylistTrack(0);
+    syncAudioToggle();
+
+    const unlockAutoplay = async () => {
+      if (audioState.autoplayUnlocked || !giftsAudioPlayer?.paused) return;
+      await playPlaylistTrack(audioState.currentTrackIndex);
+    };
+
+    document.addEventListener("click", unlockAutoplay, { passive: true });
+    document.addEventListener("touchstart", unlockAutoplay, { passive: true });
+    document.addEventListener("keydown", unlockAutoplay, { passive: true });
   }
 
   function getActiveGiftsPanel() {
@@ -272,6 +500,11 @@ if (purchaseGrid && reservationGrid) {
 
   function resizeGiftsStage(immediate = false) {
     if (!giftsStage) return;
+
+    if (!paginationState.isMobile) {
+      giftsStage.style.height = "";
+      return;
+    }
 
     const activePanel = getActiveGiftsPanel();
 
@@ -371,13 +604,22 @@ if (purchaseGrid && reservationGrid) {
         return `
           <article class="gift-card gift-card--reservation">
             <div class="gift-card__media">
-              <img class="gift-card__photo" src="${gift.image}" alt="" loading="lazy" decoding="async" />
               ${
-                gift.swatchImage
+                gift.image
+                  ? `<img class="gift-card__photo" src="${gift.image}" alt="" loading="lazy" decoding="async" />`
+                  : `<span class="gift-card__placeholder" aria-hidden="true">${escapeHtml(getGiftPlaceholder(gift.title))}</span>`
+              }
+              ${
+                gift.swatchImage || gift.swatchStyle || gift.swatchColor
                   ? `
                 <div class="gift-card__swatch" aria-hidden="true">
-                  <img class="gift-card__swatch-image" src="${gift.swatchImage}" alt="" loading="lazy" decoding="async" />
-                  <span class="gift-card__swatch-label">Fresno Aveiro</span>
+                  ${
+                    gift.swatchImage
+                      ? `<img class="gift-card__swatch-image" src="${gift.swatchImage}" alt="" loading="lazy" decoding="async" />`
+                      : `<span class="gift-card__swatch-chip" style="${
+                          gift.swatchStyle ? `background: ${gift.swatchStyle};` : `background: ${gift.swatchColor};`
+                        }"></span>`
+                  }
                 </div>
               `
                   : ""
@@ -761,6 +1003,7 @@ if (purchaseGrid && reservationGrid) {
     resizeGiftsStage(true);
   });
 
+  initPlaylist();
   renderPurchaseGifts();
   loadReservations();
   syncGiftsView("purchase", true);
