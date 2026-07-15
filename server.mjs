@@ -778,6 +778,13 @@ function parseIntegerEnv(name, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function normalizeStatementDescriptor(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 13);
+}
+
 function normalizePaymentStatus(status) {
   const normalized = String(status || "").toLowerCase();
 
@@ -1093,6 +1100,7 @@ const server = http.createServer(async (request, response) => {
         maxInstallments,
       );
       const differentialPricingId = parseIntegerEnv("MP_DIFFERENTIAL_PRICING_ID", 0);
+      const statementDescriptor = normalizeStatementDescriptor(process.env.MP_STATEMENT_DESCRIPTOR);
       const preference = await mercadopagoRequest("/checkout/preferences", {
         method: "POST",
         body: JSON.stringify({
@@ -1118,6 +1126,11 @@ const server = http.createServer(async (request, response) => {
             failure: `${baseUrl}/compra-cancelada.html`,
           },
           auto_return: "approved",
+          ...(statementDescriptor
+            ? {
+                statement_descriptor: statementDescriptor,
+              }
+            : {}),
           metadata: {
             gift_title: giftTitle,
             price_label: priceLabel,
