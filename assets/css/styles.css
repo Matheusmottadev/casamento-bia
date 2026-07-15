@@ -2312,6 +2312,7 @@ button {
   }
 
   .gift-card__badge {
+    min-width: 0;
     padding: 0.3rem 0.55rem;
     font-size: 0.56rem;
   }
