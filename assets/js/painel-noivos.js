@@ -1,10 +1,14 @@
-const summaryGrid = document.querySelector("#dashboard-summary");
-const reservationsTable = document.querySelector("#dashboard-reservations");
-const purchasesTable = document.querySelector("#dashboard-purchases");
-const rsvpsTable = document.querySelector("#dashboard-rsvps");
-const giftsTable = document.querySelector("#dashboard-gifts");
-const dashboardFeedback = document.querySelector("#dashboard-feedback");
-const dashboardMeta = document.querySelector("#dashboard-meta");
+const giftBody = document.querySelector("#giftBody");
+const reservationsCard = document.querySelector("#reservationsCard");
+const purchasesCard = document.querySelector("#purchasesCard");
+const confirmationsCard = document.querySelector("#confirmationsCard");
+const statusDot = document.querySelector("#statusDot");
+const statusText = document.querySelector("#statusText");
+const giftCount = document.querySelector("#giftCount");
+const confirmMetric = document.querySelector("#mConfirm");
+const reservedMetric = document.querySelector("#mReserved");
+const purchasesMetric = document.querySelector("#mPurchases");
+const totalMetric = document.querySelector("#mTotal");
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -18,89 +22,242 @@ function escapeHtml(value) {
 function formatCurrencyFromCents(amountInCents, currency = "brl") {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
-    currency: currency.toUpperCase(),
+    currency: String(currency || "brl").toUpperCase(),
   }).format((Number(amountInCents) || 0) / 100);
 }
 
 function formatDate(value) {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("pt-BR");
+  return Number.isNaN(date.getTime())
+    ? "-"
+    : date.toLocaleString("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
 }
 
 function formatGiftType(type) {
-  return type === "reservation" ? "Lista fisica" : "Compra online";
+  return type === "reservation" ? "Lista física" : "Compra online";
 }
 
 function formatGiftQuantity(gift) {
   return gift.type === "purchase" ? "Infinita" : String(gift.quantity || 1);
 }
 
-function renderBadge(label, tone = "neutral") {
-  return `<span class="dashboard-badge dashboard-badge--${tone}">${escapeHtml(label)}</span>`;
+function emptyState(title, subtitle) {
+  return `
+    <div class="empty">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <circle cx="20" cy="20" r="18.5" stroke="#C9BCA3" stroke-width="1" stroke-dasharray="3 4"></circle>
+        <path d="M13 24l5-9 4 6 3-4 5 7" stroke="#C9BCA3" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+      <p><b>${escapeHtml(title)}</b>${escapeHtml(subtitle)}</p>
+    </div>
+  `;
 }
 
-function getGiftAvailability(gift) {
-  if (gift.type !== "reservation") {
-    return {
-      label: gift.paidCount > 0 ? "Pago" : gift.pendingCount > 0 ? "Pendente" : "Disponivel",
-      tone: gift.paidCount > 0 ? "success" : gift.pendingCount > 0 ? "warning" : "neutral",
-    };
+function giftStatusBadge(gift) {
+  if (gift.type === "reservation") {
+    const totalQuantity = Number(gift.quantity || 1);
+    const reservedCount = Number(gift.reservedCount || 0);
+    const remaining = totalQuantity - reservedCount;
+
+    if (remaining <= 0) {
+      return '<span class="badge sold-out">Esgotado</span>';
+    }
+
+    if (remaining === 1) {
+      return '<span class="badge unit">1 unidade</span>';
+    }
+
+    return `<span class="badge unit">${remaining} unidades</span>`;
   }
 
-  const totalQuantity = Number(gift.quantity || 1);
-  const reservedCount = Number(gift.reservedCount || 0);
-  const remaining = totalQuantity - reservedCount;
-
-  if (remaining <= 0) {
-    return { label: "Esgotado", tone: "muted" };
+  if (Number(gift.paidCount || 0) > 0) {
+    return '<span class="badge paid">Pago</span>';
   }
 
-  if (remaining === 1) {
-    return { label: "1 unidade", tone: "warning" };
+  if (Number(gift.pendingCount || 0) > 0) {
+    return '<span class="badge pending">Pendente</span>';
   }
 
-  return { label: `${remaining} unidades`, tone: "success" };
+  return '<span class="badge available">Disponível</span>';
 }
 
-function formatPurchaseStatus(status) {
+function purchaseStatusBadge(status) {
   const normalized = String(status || "").toLowerCase();
 
   if (["approved", "paid", "succeeded"].includes(normalized)) {
-    return renderBadge("Pago", "success");
+    return '<span class="badge paid">Pago</span>';
   }
 
   if (["pending", "in_process", "authorized"].includes(normalized)) {
-    return renderBadge("Pendente", "warning");
+    return '<span class="badge pending">Pendente</span>';
   }
 
-  if (normalized) {
-    return renderBadge(normalized, "muted");
-  }
-
-  return "-";
+  return `<span class="badge available">${escapeHtml(normalized || "-")}</span>`;
 }
 
-function renderRows(items, columns, emptyLabel) {
-  if (!items.length) {
-    return `<tr><td colspan="${columns.length}" class="dashboard-empty-cell">${escapeHtml(emptyLabel)}</td></tr>`;
+function renderMetrics(data) {
+  if (confirmMetric) confirmMetric.textContent = String(data.summary.totalGuests || 0);
+  if (reservedMetric) reservedMetric.textContent = String(data.summary.totalReservations || 0);
+  if (purchasesMetric) purchasesMetric.textContent = String(data.summary.totalPurchases || 0);
+  if (totalMetric) totalMetric.textContent = formatCurrencyFromCents(data.summary.totalPaidAmount || 0, "brl");
+}
+
+function renderGifts(gifts) {
+  if (!giftBody) return;
+
+  if (giftCount) {
+    giftCount.textContent = `${gifts.length} itens`;
   }
 
-  return items
+  if (!gifts.length) {
+    giftBody.innerHTML = `<tr><td colspan="7" style="padding:0;">${emptyState(
+      "Nenhum presente cadastrado",
+      "Assim que a lista for criada, ela aparece aqui.",
+    )}</td></tr>`;
+    return;
+  }
+
+  const sortedGifts = [...gifts].sort((left, right) => {
+    if (left.type !== right.type) {
+      return left.type.localeCompare(right.type);
+    }
+
+    return String(left.title || "").localeCompare(String(right.title || ""));
+  });
+
+  giftBody.innerHTML = sortedGifts
     .map(
-      (item) => `
+      (gift) => `
         <tr>
-          ${columns.map((column) => `<td>${column(item)}</td>`).join("")}
+          <td class="gift-cell" data-label="Presente">
+            <span class="gift-name">${escapeHtml(gift.title)}</span>
+          </td>
+          <td data-label="Tipo"><span class="gift-type">${escapeHtml(formatGiftType(gift.type))}</span></td>
+          <td data-label="Status">${giftStatusBadge(gift)}</td>
+          <td class="num" data-label="Qtde">${escapeHtml(formatGiftQuantity(gift))}</td>
+          <td class="num" data-label="Reservados">${Number(gift.reservedCount || 0)}</td>
+          <td class="num" data-label="Pagos">${Number(gift.paidCount || 0)}</td>
+          <td class="num" data-label="Pendentes">${Number(gift.pendingCount || 0)}</td>
         </tr>
       `,
     )
     .join("");
 }
 
+function renderReservations(list) {
+  if (!reservationsCard) return;
+
+  if (!list.length) {
+    reservationsCard.innerHTML = emptyState(
+      "Nenhuma reserva registrada",
+      "Quando alguém reservar um item, ele aparece aqui.",
+    );
+    return;
+  }
+
+  reservationsCard.innerHTML = list
+    .map(
+      (reservation) => `
+        <div class="mini-row">
+          <div class="mini-top">
+            <span class="mini-name">${escapeHtml(reservation.name)}</span>
+            <span class="mini-date">${formatDate(reservation.createdAt)}</span>
+          </div>
+          <div class="mini-sub">${escapeHtml(reservation.giftTitle)} · ${escapeHtml(reservation.contact || "-")}</div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderPurchases(list) {
+  if (!purchasesCard) return;
+
+  if (!list.length) {
+    purchasesCard.innerHTML = emptyState(
+      "Nenhuma compra registrada",
+      "Pagamentos aprovados via Mercado Pago aparecem aqui.",
+    );
+    return;
+  }
+
+  purchasesCard.innerHTML = list
+    .map(
+      (purchase) => `
+        <div class="mini-row">
+          <div class="mini-top">
+            <span class="mini-name">${escapeHtml(`${purchase.firstName} ${purchase.lastName}`.trim() || "-")}</span>
+            <span class="mini-value">${formatCurrencyFromCents(purchase.amountTotal, purchase.currency || "brl")}</span>
+          </div>
+          <div class="mini-sub">${escapeHtml(purchase.giftTitle)}</div>
+          <div class="mini-top" style="margin-top:8px;">
+            ${purchaseStatusBadge(purchase.paymentStatus)}
+            <span class="mini-date">${formatDate(purchase.createdAt)}</span>
+          </div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderConfirmations(list) {
+  if (!confirmationsCard) return;
+
+  if (!list.length) {
+    confirmationsCard.innerHTML = emptyState(
+      "Nenhuma confirmação registrada",
+      "Assim que um convidado confirmar, o nome aparece aqui.",
+    );
+    return;
+  }
+
+  confirmationsCard.innerHTML = list
+    .map(
+      (confirmation) => `
+        <div class="mini-row">
+          <div class="mini-top">
+            <span class="mini-name">${escapeHtml(`${confirmation.firstName} ${confirmation.lastName}`.trim())}</span>
+            <span class="mini-date">${formatDate(confirmation.createdAt)}</span>
+          </div>
+          <div class="mini-sub">${escapeHtml(confirmation.phone || "-")}</div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function setStatus(state, updatedAt) {
+  if (!statusDot || !statusText) return;
+
+  statusDot.className = "status-dot";
+
+  if (state === "loading") {
+    statusDot.classList.add("loading");
+    statusText.textContent = "Carregando painel…";
+    return;
+  }
+
+  if (state === "error") {
+    statusDot.classList.add("err");
+    statusText.textContent = "Não foi possível atualizar o painel.";
+    return;
+  }
+
+  statusText.innerHTML = `Atualizado em <b>${escapeHtml(
+    new Date(updatedAt).toLocaleString("pt-BR", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }),
+  )}</b>`;
+}
+
 async function loadCoupleDashboard() {
-  if (!summaryGrid || !dashboardFeedback) return;
+  setStatus("loading");
 
   try {
-    dashboardFeedback.textContent = "Carregando dados dos noivos...";
     const response = await fetch("/api/couple-dashboard");
     const data = await response.json();
 
@@ -108,81 +265,15 @@ async function loadCoupleDashboard() {
       throw new Error(data.error || `HTTP ${response.status}`);
     }
 
-    summaryGrid.innerHTML = `
-      <article class="dashboard-metric"><strong>${data.summary.totalGuests}</strong><span>Confirmacoes de presenca</span></article>
-      <article class="dashboard-metric"><strong>${data.summary.totalReservations}</strong><span>Itens da lista fisica reservados</span></article>
-      <article class="dashboard-metric"><strong>${data.summary.totalPurchases}</strong><span>Compras registradas</span></article>
-      <article class="dashboard-metric"><strong>${formatCurrencyFromCents(data.summary.totalPaidAmount)}</strong><span>Total pago aprovado</span></article>
-    `;
-
-    const sortedGifts = [...data.gifts].sort((left, right) => {
-      if (left.type !== right.type) {
-        return left.type.localeCompare(right.type);
-      }
-
-      return String(left.title || "").localeCompare(String(right.title || ""));
-    });
-
-    giftsTable.innerHTML = renderRows(
-      sortedGifts,
-      [
-        (gift) => `<strong>${escapeHtml(gift.title)}</strong>`,
-        (gift) => escapeHtml(formatGiftType(gift.type)),
-        (gift) => {
-          const availability = getGiftAvailability(gift);
-          return renderBadge(availability.label, availability.tone);
-        },
-        (gift) => formatGiftQuantity(gift),
-        (gift) => String(gift.reservedCount || 0),
-        (gift) => String(gift.paidCount || 0),
-        (gift) => String(gift.pendingCount || 0),
-      ],
-      "Nenhum presente cadastrado ainda.",
-    );
-
-    reservationsTable.innerHTML = renderRows(
-      data.reservations,
-      [
-        (item) => `<strong>${escapeHtml(item.giftTitle)}</strong>`,
-        (item) => escapeHtml(item.name),
-        (item) => escapeHtml(item.contact || "-"),
-        (item) => formatDate(item.createdAt),
-      ],
-      "Nenhuma reserva registrada.",
-    );
-
-    purchasesTable.innerHTML = renderRows(
-      data.purchases,
-      [
-        (item) => `<strong>${escapeHtml(item.giftTitle)}</strong>`,
-        (item) => escapeHtml(`${item.firstName} ${item.lastName}`.trim() || "-"),
-        (item) => formatCurrencyFromCents(item.amountTotal, item.currency || "brl"),
-        (item) => formatPurchaseStatus(item.paymentStatus),
-        (item) => formatDate(item.createdAt),
-      ],
-      "Nenhuma compra registrada.",
-    );
-
-    rsvpsTable.innerHTML = renderRows(
-      data.rsvps,
-      [
-        (item) => `<strong>${escapeHtml(`${item.firstName} ${item.lastName}`.trim())}</strong>`,
-        (item) => escapeHtml(item.phone || "-"),
-        (item) => formatDate(item.createdAt),
-      ],
-      "Nenhuma confirmação de presença registrada.",
-    );
-
-    dashboardFeedback.textContent = "";
-    if (dashboardMeta) {
-      dashboardMeta.textContent = `Atualizado em ${new Date().toLocaleString("pt-BR")}`;
-    }
+    renderMetrics(data);
+    renderGifts(data.gifts || []);
+    renderReservations(data.reservations || []);
+    renderPurchases(data.purchases || []);
+    renderConfirmations(data.rsvps || []);
+    setStatus("ok", new Date().toISOString());
   } catch (error) {
+    setStatus("error");
     console.error("Nao foi possivel carregar o painel dos noivos.", error);
-    dashboardFeedback.textContent = "Nao foi possivel carregar o painel agora.";
-    if (dashboardMeta) {
-      dashboardMeta.textContent = "Falha ao atualizar";
-    }
   }
 }
 
