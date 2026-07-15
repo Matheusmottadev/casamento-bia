@@ -1,11 +1,9 @@
-const purchaseGiftBody = document.querySelector("#purchaseGiftBody");
 const reservationGiftBody = document.querySelector("#reservationGiftBody");
 const reservationsCard = document.querySelector("#reservationsCard");
 const purchasesCard = document.querySelector("#purchasesCard");
 const confirmationsCard = document.querySelector("#confirmationsCard");
 const statusDot = document.querySelector("#statusDot");
 const statusText = document.querySelector("#statusText");
-const purchaseGiftCount = document.querySelector("#purchaseGiftCount");
 const reservationGiftCount = document.querySelector("#reservationGiftCount");
 const confirmMetric = document.querySelector("#mConfirm");
 const reservedMetric = document.querySelector("#mReserved");
@@ -44,6 +42,20 @@ function formatGiftType(type) {
 
 function formatGiftQuantity(gift) {
   return gift.type === "purchase" ? "Infinita" : String(gift.quantity || 1);
+}
+
+function normalizePaymentStatus(status) {
+  const normalized = String(status || "").toLowerCase();
+
+  if (["approved", "paid", "succeeded"].includes(normalized)) {
+    return "paid";
+  }
+
+  if (["pending", "in_process", "authorized"].includes(normalized)) {
+    return "pending";
+  }
+
+  return normalized || "unknown";
 }
 
 function emptyState(title, subtitle) {
@@ -111,37 +123,6 @@ function sortGifts(gifts) {
   return [...gifts].sort((left, right) => String(left.title || "").localeCompare(String(right.title || "")));
 }
 
-function renderPurchaseGifts(gifts) {
-  if (!purchaseGiftBody) return;
-
-  if (purchaseGiftCount) {
-    purchaseGiftCount.textContent = `${gifts.length} itens`;
-  }
-
-  if (!gifts.length) {
-    purchaseGiftBody.innerHTML = `<tr><td colspan="4" style="padding:0;">${emptyState(
-      "Nenhum presente de compra",
-      "Assim que a lista online for criada, ela aparece aqui.",
-    )}</td></tr>`;
-    return;
-  }
-
-  purchaseGiftBody.innerHTML = sortGifts(gifts)
-    .map(
-      (gift) => `
-        <tr>
-          <td class="gift-cell" data-label="Presente">
-            <span class="gift-name">${escapeHtml(gift.title)}</span>
-          </td>
-          <td data-label="Status">${giftStatusBadge(gift)}</td>
-          <td class="num" data-label="Qtde">${escapeHtml(formatGiftQuantity(gift))}</td>
-          <td class="num" data-label="Pagos">${Number(gift.paidCount || 0)}</td>
-        </tr>
-      `,
-    )
-    .join("");
-}
-
 function renderReservationGifts(gifts) {
   if (!reservationGiftBody) return;
 
@@ -164,9 +145,9 @@ function renderReservationGifts(gifts) {
           <td class="gift-cell" data-label="Presente">
             <span class="gift-name">${escapeHtml(gift.title)}</span>
           </td>
-          <td data-label="Status">${giftStatusBadge(gift)}</td>
-          <td class="num" data-label="Qtde">${escapeHtml(formatGiftQuantity(gift))}</td>
-          <td class="num" data-label="Reservados">${Number(gift.reservedCount || 0)}</td>
+          <td data-label="Disponibilidade">${giftStatusBadge(gift)}</td>
+          <td class="num" data-label="Quantidade total">${escapeHtml(formatGiftQuantity(gift))}</td>
+          <td class="num" data-label="Pessoas reservando">${Number(gift.reservedCount || 0)}</td>
         </tr>
       `,
     )
@@ -202,7 +183,9 @@ function renderReservations(list) {
 function renderPurchases(list) {
   if (!purchasesCard) return;
 
-  if (!list.length) {
+  const approvedPurchases = list.filter((purchase) => normalizePaymentStatus(purchase.paymentStatus) === "paid");
+
+  if (!approvedPurchases.length) {
     purchasesCard.innerHTML = emptyState(
       "Nenhuma compra registrada",
       "Pagamentos aprovados via Mercado Pago aparecem aqui.",
@@ -210,19 +193,15 @@ function renderPurchases(list) {
     return;
   }
 
-  purchasesCard.innerHTML = list
+  purchasesCard.innerHTML = approvedPurchases
     .map(
       (purchase) => `
         <div class="mini-row">
           <div class="mini-top">
             <span class="mini-name">${escapeHtml(`${purchase.firstName} ${purchase.lastName}`.trim() || "-")}</span>
-            <span class="mini-value">${formatCurrencyFromCents(purchase.amountTotal, purchase.currency || "brl")}</span>
-          </div>
-          <div class="mini-sub">${escapeHtml(purchase.giftTitle)}</div>
-          <div class="mini-top" style="margin-top:8px;">
-            ${purchaseStatusBadge(purchase.paymentStatus)}
             <span class="mini-date">${formatDate(purchase.createdAt)}</span>
           </div>
+          <div class="mini-sub">${escapeHtml(purchase.giftTitle)}</div>
         </div>
       `,
     )
@@ -292,7 +271,6 @@ async function loadCoupleDashboard() {
     }
 
     renderMetrics(data);
-    renderPurchaseGifts((data.gifts || []).filter((gift) => gift.type === "purchase"));
     renderReservationGifts((data.gifts || []).filter((gift) => gift.type === "reservation"));
     renderReservations(data.reservations || []);
     renderPurchases(data.purchases || []);
