@@ -238,6 +238,12 @@ button {
   transform: translate(-50%, 0);
 }
 
+.mobile-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .menu-toggle {
   display: inline-flex;
   flex-direction: column;
@@ -257,6 +263,22 @@ button {
   width: 24px;
   height: 1.5px;
   background: currentColor;
+}
+
+.site-audio__toggle--mobile {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(249, 244, 237, 0.22);
+  border-radius: 999px;
+  background: rgba(249, 244, 237, 0.08);
+  backdrop-filter: blur(10px);
+  font-size: 0.78rem;
+}
+
+.site-header--solid .site-audio__toggle--mobile {
+  border-color: rgba(101, 112, 67, 0.14);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .mobile-menu {
@@ -1081,6 +1103,10 @@ button {
 @media (min-width: 1024px) {
   .site-header {
     padding: 0 42px;
+  }
+
+  .mobile-header-actions {
+    display: none;
   }
 
   .desktop-nav {
@@ -2278,6 +2304,10 @@ button {
 
   .gifts-audio__slider {
     width: min(170px, 48vw);
+  }
+
+  .site-audio__toggle--mobile {
+    display: inline-flex;
   }
 
   .gifts-grid--home {

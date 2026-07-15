@@ -208,9 +208,9 @@ if (purchaseGrid && reservationGrid) {
     },
     {
       id: "buffet-first-pass",
+      image: "./assets/images/gifts/purchase/buffet-first-pass-user.png",
       title: "Vale ser o primeiro do Buffet",
       price: "R$ 999,90",
-      emoji: "🍽️",
     },
     {
       id: "plus-one-intruder",

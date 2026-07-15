@@ -34,17 +34,20 @@
           <button class="desktop-nav__item desktop-nav__action" type="button" data-open-rsvp="true">Confirmar presença</button>
         </nav>
 
-        <button
-          class="menu-toggle"
-          type="button"
-          aria-expanded="false"
-          aria-controls="mobile-menu"
-          aria-label="Abrir menu"
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
+        <div class="mobile-header-actions">
+          <button class="site-audio__toggle site-audio__toggle--mobile" type="button" aria-pressed="false" aria-label="Tocar música">▶</button>
+          <button
+            class="menu-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="mobile-menu"
+            aria-label="Abrir menu"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
       </header>
 
       <div class="mobile-menu" id="mobile-menu" aria-hidden="true" hidden>

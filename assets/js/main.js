@@ -34,7 +34,7 @@ const rsvpModalClose = document.querySelector("#rsvp-modal-close");
 const rsvpForm = document.querySelector("#rsvp-form");
 const rsvpFeedback = document.querySelector("#rsvp-feedback");
 const siteAudioPlayer = document.querySelector("#site-audio-player");
-const siteAudioToggle = document.querySelector("#site-audio-toggle");
+const siteAudioToggles = document.querySelectorAll(".site-audio__toggle");
 const siteAudioVolume = document.querySelector("#site-audio-volume");
 const messageRotation = {
   messages: [],
@@ -475,12 +475,14 @@ function loadSitePlaylistTrack(trackIndex, { resetTime = true } = {}) {
 }
 
 function syncSiteAudioControls() {
-  if (!siteAudioToggle || !siteAudioPlayer) return;
+  if (!siteAudioToggles.length || !siteAudioPlayer) return;
 
   const isPlaying = !siteAudioPlayer.paused;
-  siteAudioToggle.textContent = isPlaying ? "❚❚" : "▶";
-  siteAudioToggle.setAttribute("aria-pressed", String(isPlaying));
-  siteAudioToggle.setAttribute("aria-label", isPlaying ? "Pausar música" : "Tocar música");
+  siteAudioToggles.forEach((toggle) => {
+    toggle.textContent = isPlaying ? "❚❚" : "▶";
+    toggle.setAttribute("aria-pressed", String(isPlaying));
+    toggle.setAttribute("aria-label", isPlaying ? "Pausar música" : "Tocar música");
+  });
 }
 
 async function playSitePlaylistTrack(trackIndex = siteAudioState.currentTrackIndex) {
@@ -543,7 +545,7 @@ function syncSiteAudioBeforeLeave() {
 }
 
 function initSiteAudio() {
-  if (!siteAudioPlayer || !siteAudioToggle || !siteAudioVolume) return;
+  if (!siteAudioPlayer || !siteAudioToggles.length || !siteAudioVolume) return;
 
   hydrateSiteAudioState();
 
@@ -572,13 +574,15 @@ function initSiteAudio() {
     persistSiteAudioState();
   });
 
-  siteAudioToggle.addEventListener("click", async () => {
-    if (siteAudioPlayer.paused) {
-      await playSitePlaylistTrack(siteAudioState.currentTrackIndex);
-      return;
-    }
+  siteAudioToggles.forEach((toggle) => {
+    toggle.addEventListener("click", async () => {
+      if (siteAudioPlayer.paused) {
+        await playSitePlaylistTrack(siteAudioState.currentTrackIndex);
+        return;
+      }
 
-    pauseSitePlaylist();
+      pauseSitePlaylist();
+    });
   });
 
   syncSiteAudioControls();
