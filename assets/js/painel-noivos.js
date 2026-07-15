@@ -31,6 +31,10 @@ function formatGiftType(type) {
   return type === "reservation" ? "Lista fisica" : "Compra online";
 }
 
+function formatGiftQuantity(gift) {
+  return gift.type === "purchase" ? "Infinita" : String(gift.quantity || 1);
+}
+
 function renderBadge(label, tone = "neutral") {
   return `<span class="dashboard-badge dashboard-badge--${tone}">${escapeHtml(label)}</span>`;
 }
@@ -128,7 +132,7 @@ async function loadCoupleDashboard() {
           const availability = getGiftAvailability(gift);
           return renderBadge(availability.label, availability.tone);
         },
-        (gift) => String(gift.quantity || 1),
+        (gift) => formatGiftQuantity(gift),
         (gift) => String(gift.reservedCount || 0),
         (gift) => String(gift.paidCount || 0),
         (gift) => String(gift.pendingCount || 0),

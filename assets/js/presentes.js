@@ -544,7 +544,9 @@ if (purchaseGrid && reservationGrid) {
   }
 
   function renderPurchaseGifts() {
-    purchaseGrid.innerHTML = purchaseGifts
+    const visiblePurchaseGifts = getVisibleGifts(purchaseGifts, paginationState.purchaseVisibleCount);
+
+    purchaseGrid.innerHTML = visiblePurchaseGifts
       .map(
         (gift) => `
           <article class="gift-card">
@@ -567,7 +569,7 @@ if (purchaseGrid && reservationGrid) {
       )
       .join("");
 
-    updateLoadMoreButton(purchaseLoadMore, false);
+    updateLoadMoreButton(purchaseLoadMore, visiblePurchaseGifts.length < purchaseGifts.length);
 
     if (giftsViewState.currentView === "purchase") {
       resizeGiftsStage(true);
