@@ -427,6 +427,10 @@ function updateHeaderState() {
 }
 
 function persistSiteAudioState() {
+  if (siteAudioPlayer) {
+    siteAudioState.currentTime = Math.max(0, Number(siteAudioPlayer.currentTime || siteAudioState.currentTime || 0));
+  }
+
   try {
     window.localStorage.setItem(
       SITE_AUDIO_STORAGE_KEY,
@@ -531,6 +535,13 @@ function restoreSiteAudioTime() {
   }
 }
 
+function syncSiteAudioBeforeLeave() {
+  if (!siteAudioPlayer) return;
+
+  siteAudioState.currentTime = Math.max(0, Number(siteAudioPlayer.currentTime || 0));
+  persistSiteAudioState();
+}
+
 function initSiteAudio() {
   if (!siteAudioPlayer || !siteAudioToggle || !siteAudioVolume) return;
 
@@ -542,8 +553,11 @@ function initSiteAudio() {
 
   siteAudioPlayer.addEventListener("play", syncSiteAudioControls);
   siteAudioPlayer.addEventListener("pause", syncSiteAudioControls);
+  siteAudioPlayer.addEventListener("pause", syncSiteAudioBeforeLeave);
   siteAudioPlayer.addEventListener("timeupdate", syncSiteAudioTime);
   siteAudioPlayer.addEventListener("loadedmetadata", restoreSiteAudioTime);
+  siteAudioPlayer.addEventListener("canplay", restoreSiteAudioTime);
+  siteAudioPlayer.addEventListener("seeked", syncSiteAudioTime);
 
   loadSitePlaylistTrack(siteAudioState.currentTrackIndex, { resetTime: false });
   siteAudioVolume.value = String(siteAudioState.volume);
@@ -578,8 +592,13 @@ function initSiteAudio() {
     await playSitePlaylistTrack(siteAudioState.currentTrackIndex);
   };
 
-  window.addEventListener("beforeunload", syncSiteAudioTime);
-  window.addEventListener("pagehide", syncSiteAudioTime);
+  window.addEventListener("beforeunload", syncSiteAudioBeforeLeave);
+  window.addEventListener("pagehide", syncSiteAudioBeforeLeave);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      syncSiteAudioBeforeLeave();
+    }
+  });
   document.addEventListener("click", unlockAutoplay, { passive: true });
   document.addEventListener("touchstart", unlockAutoplay, { passive: true });
   document.addEventListener("keydown", unlockAutoplay, { passive: true });
