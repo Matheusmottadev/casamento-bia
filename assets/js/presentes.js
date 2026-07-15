@@ -29,26 +29,12 @@ const purchasePhone = document.querySelector("#purchase-phone");
 const giftToast = document.querySelector("#gift-toast");
 const purchaseLoadMore = document.querySelector("#purchase-load-more");
 const reservationLoadMore = document.querySelector("#reservation-load-more");
-const giftsAudioPlayer = document.querySelector("#gifts-audio-player");
-const giftsAudioToggle = document.querySelector("#gifts-audio-toggle");
-const giftsAudioVolume = document.querySelector("#gifts-audio-volume");
 
 if (purchaseGrid && reservationGrid) {
   const MOBILE_GIFTS_BATCH_SIZE = 6;
-  const giftsPlaylist = [
-    { title: "Levitating", src: "./assets/audio/levitating.mp3" },
-    { title: "24K Magic", src: "./assets/audio/24k-magic.mp3" },
-    { title: "Trap Queen", src: "./assets/audio/trap-queen.mp3" },
-    { title: "Don't Stop 'Til You Get Enough", src: "./assets/audio/dont-stop-til-you-get-enough.mp3" },
-  ];
 
   const giftsViewState = {
     currentView: "purchase",
-  };
-
-  const audioState = {
-    currentTrackIndex: 0,
-    autoplayUnlocked: false,
   };
 
   const purchaseGifts = [
@@ -391,93 +377,6 @@ if (purchaseGrid && reservationGrid) {
 
   function getReservedCount(giftId) {
     return reservationState.reservations.filter((item) => item.giftId === giftId).length;
-  }
-
-  function loadPlaylistTrack(trackIndex) {
-    if (!giftsAudioPlayer) return;
-
-    audioState.currentTrackIndex = (trackIndex + giftsPlaylist.length) % giftsPlaylist.length;
-    giftsAudioPlayer.src = giftsPlaylist[audioState.currentTrackIndex].src;
-    giftsAudioPlayer.load();
-  }
-
-  function syncAudioToggle() {
-    if (!giftsAudioToggle || !giftsAudioPlayer) return;
-
-    const isPlaying = !giftsAudioPlayer.paused;
-    giftsAudioToggle.textContent = isPlaying ? "Pause" : "Play";
-    giftsAudioToggle.setAttribute("aria-pressed", String(isPlaying));
-  }
-
-  async function playPlaylistTrack(trackIndex = audioState.currentTrackIndex) {
-    if (!giftsAudioPlayer) return;
-
-    if (giftsAudioPlayer.src !== new URL(giftsPlaylist[trackIndex].src, window.location.href).href) {
-      loadPlaylistTrack(trackIndex);
-    }
-
-    try {
-      await giftsAudioPlayer.play();
-      audioState.autoplayUnlocked = true;
-      syncAudioToggle();
-    } catch {
-      audioState.autoplayUnlocked = false;
-      syncAudioToggle();
-    }
-  }
-
-  function pausePlaylist() {
-    if (!giftsAudioPlayer) return;
-
-    giftsAudioPlayer.pause();
-    syncAudioToggle();
-  }
-
-  function playNextPlaylistTrack() {
-    loadPlaylistTrack(audioState.currentTrackIndex + 1);
-    playPlaylistTrack(audioState.currentTrackIndex);
-  }
-
-  function initPlaylist() {
-    if (!giftsAudioPlayer) return;
-
-    loadPlaylistTrack(0);
-    giftsAudioPlayer.volume = Number(giftsAudioVolume?.value || 8) / 100;
-
-    giftsAudioPlayer.addEventListener("ended", () => {
-      playNextPlaylistTrack();
-    });
-
-    giftsAudioPlayer.addEventListener("play", syncAudioToggle);
-    giftsAudioPlayer.addEventListener("pause", syncAudioToggle);
-
-    giftsAudioVolume?.addEventListener("input", () => {
-      if (!giftsAudioPlayer) return;
-      giftsAudioPlayer.volume = Number(giftsAudioVolume.value || 0) / 100;
-    });
-
-    giftsAudioToggle?.addEventListener("click", async () => {
-      if (!giftsAudioPlayer) return;
-
-      if (giftsAudioPlayer.paused) {
-        await playPlaylistTrack(audioState.currentTrackIndex);
-        return;
-      }
-
-      pausePlaylist();
-    });
-
-    playPlaylistTrack(0);
-    syncAudioToggle();
-
-    const unlockAutoplay = async () => {
-      if (audioState.autoplayUnlocked || !giftsAudioPlayer?.paused) return;
-      await playPlaylistTrack(audioState.currentTrackIndex);
-    };
-
-    document.addEventListener("click", unlockAutoplay, { passive: true });
-    document.addEventListener("touchstart", unlockAutoplay, { passive: true });
-    document.addEventListener("keydown", unlockAutoplay, { passive: true });
   }
 
   function getActiveGiftsPanel() {
@@ -989,7 +888,6 @@ if (purchaseGrid && reservationGrid) {
     resizeGiftsStage(true);
   });
 
-  initPlaylist();
   renderPurchaseGifts();
   loadReservations();
   syncGiftsView("purchase", true);

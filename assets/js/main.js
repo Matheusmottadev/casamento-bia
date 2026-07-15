@@ -33,6 +33,9 @@ const rsvpModal = document.querySelector("#rsvp-modal");
 const rsvpModalClose = document.querySelector("#rsvp-modal-close");
 const rsvpForm = document.querySelector("#rsvp-form");
 const rsvpFeedback = document.querySelector("#rsvp-feedback");
+const siteAudioPlayer = document.querySelector("#site-audio-player");
+const siteAudioToggle = document.querySelector("#site-audio-toggle");
+const siteAudioVolume = document.querySelector("#site-audio-volume");
 const messageRotation = {
   messages: [],
   currentIndex: 0,
@@ -40,6 +43,19 @@ const messageRotation = {
   isBoardMode: false,
 };
 const RSVP_HASH = "#confirmar-presenca";
+const SITE_AUDIO_STORAGE_KEY = "kb-site-audio-state";
+const sitePlaylist = [
+  { title: "Levitating", src: "./assets/audio/levitating.mp3" },
+  { title: "24K Magic", src: "./assets/audio/24k-magic.mp3" },
+  { title: "Trap Queen", src: "./assets/audio/trap-queen.mp3" },
+  { title: "Don't Stop 'Til You Get Enough", src: "./assets/audio/dont-stop-til-you-get-enough.mp3" },
+];
+const siteAudioState = {
+  currentTrackIndex: 0,
+  shouldPlay: true,
+  volume: 8,
+  autoplayUnlocked: false,
+};
 
 function formatNumber(value) {
   return String(value).padStart(2, "0");
@@ -409,6 +425,132 @@ function updateHeaderState() {
   siteHeader.classList.toggle("site-header--solid", shouldBeSolid);
 }
 
+function persistSiteAudioState() {
+  try {
+    window.localStorage.setItem(
+      SITE_AUDIO_STORAGE_KEY,
+      JSON.stringify({
+        currentTrackIndex: siteAudioState.currentTrackIndex,
+        shouldPlay: siteAudioState.shouldPlay,
+        volume: siteAudioState.volume,
+      }),
+    );
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function hydrateSiteAudioState() {
+  try {
+    const rawState = window.localStorage.getItem(SITE_AUDIO_STORAGE_KEY);
+
+    if (!rawState) return;
+
+    const parsedState = JSON.parse(rawState);
+    siteAudioState.currentTrackIndex = Number(parsedState.currentTrackIndex || 0) % sitePlaylist.length;
+    siteAudioState.shouldPlay = parsedState.shouldPlay !== false;
+    siteAudioState.volume = Math.min(100, Math.max(0, Number(parsedState.volume ?? 8)));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function loadSitePlaylistTrack(trackIndex) {
+  if (!siteAudioPlayer) return;
+
+  siteAudioState.currentTrackIndex = (trackIndex + sitePlaylist.length) % sitePlaylist.length;
+  siteAudioPlayer.src = sitePlaylist[siteAudioState.currentTrackIndex].src;
+  siteAudioPlayer.load();
+  persistSiteAudioState();
+}
+
+function syncSiteAudioControls() {
+  if (!siteAudioToggle || !siteAudioPlayer) return;
+
+  const isPlaying = !siteAudioPlayer.paused;
+  siteAudioToggle.textContent = isPlaying ? "Pause" : "Play";
+  siteAudioToggle.setAttribute("aria-pressed", String(isPlaying));
+}
+
+async function playSitePlaylistTrack(trackIndex = siteAudioState.currentTrackIndex) {
+  if (!siteAudioPlayer) return;
+
+  if (siteAudioPlayer.src !== new URL(sitePlaylist[trackIndex].src, window.location.href).href) {
+    loadSitePlaylistTrack(trackIndex);
+  }
+
+  try {
+    await siteAudioPlayer.play();
+    siteAudioState.shouldPlay = true;
+    siteAudioState.autoplayUnlocked = true;
+    persistSiteAudioState();
+    syncSiteAudioControls();
+  } catch {
+    siteAudioState.autoplayUnlocked = false;
+    syncSiteAudioControls();
+  }
+}
+
+function pauseSitePlaylist() {
+  if (!siteAudioPlayer) return;
+
+  siteAudioPlayer.pause();
+  siteAudioState.shouldPlay = false;
+  persistSiteAudioState();
+  syncSiteAudioControls();
+}
+
+function playNextSitePlaylistTrack() {
+  loadSitePlaylistTrack(siteAudioState.currentTrackIndex + 1);
+  playSitePlaylistTrack(siteAudioState.currentTrackIndex);
+}
+
+function initSiteAudio() {
+  if (!siteAudioPlayer || !siteAudioToggle || !siteAudioVolume) return;
+
+  hydrateSiteAudioState();
+  loadSitePlaylistTrack(siteAudioState.currentTrackIndex);
+  siteAudioVolume.value = String(siteAudioState.volume);
+  siteAudioPlayer.volume = siteAudioState.volume / 100;
+
+  siteAudioPlayer.addEventListener("ended", () => {
+    playNextSitePlaylistTrack();
+  });
+
+  siteAudioPlayer.addEventListener("play", syncSiteAudioControls);
+  siteAudioPlayer.addEventListener("pause", syncSiteAudioControls);
+
+  siteAudioVolume.addEventListener("input", () => {
+    siteAudioState.volume = Math.min(100, Math.max(0, Number(siteAudioVolume.value || 0)));
+    siteAudioPlayer.volume = siteAudioState.volume / 100;
+    persistSiteAudioState();
+  });
+
+  siteAudioToggle.addEventListener("click", async () => {
+    if (siteAudioPlayer.paused) {
+      await playSitePlaylistTrack(siteAudioState.currentTrackIndex);
+      return;
+    }
+
+    pauseSitePlaylist();
+  });
+
+  syncSiteAudioControls();
+
+  if (siteAudioState.shouldPlay) {
+    playSitePlaylistTrack(siteAudioState.currentTrackIndex);
+  }
+
+  const unlockAutoplay = async () => {
+    if (!siteAudioState.shouldPlay || siteAudioState.autoplayUnlocked || !siteAudioPlayer.paused) return;
+    await playSitePlaylistTrack(siteAudioState.currentTrackIndex);
+  };
+
+  document.addEventListener("click", unlockAutoplay, { passive: true });
+  document.addEventListener("touchstart", unlockAutoplay, { passive: true });
+  document.addEventListener("keydown", unlockAutoplay, { passive: true });
+}
+
 async function submitRsvp(event) {
   event.preventDefault();
 
@@ -536,6 +678,7 @@ updateVisitorCount();
 updateHeaderState();
 loadMessages();
 syncMessageMode();
+initSiteAudio();
 
 if (shouldOpenRsvpFromUrl()) {
   openRsvpModal();

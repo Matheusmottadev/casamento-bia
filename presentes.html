@@ -22,14 +22,13 @@
         </a>
 
         <nav class="desktop-nav" aria-label="Navegação principal">
-          <div class="desktop-nav__group">
-            <button class="desktop-nav__item desktop-nav__item--caret desktop-nav__trigger" type="button" aria-expanded="false">
-              Páginas
-            </button>
-            <div class="desktop-nav__submenu" aria-label="Seções do site">
-              <a href="./index.html#paginas">Início</a>
-              <a href="./index.html#mensagens">Mensagens</a>
-            </div>
+          <div class="site-audio" aria-label="Controles de música">
+            <button class="site-audio__toggle" id="site-audio-toggle" type="button" aria-pressed="false">Play</button>
+            <label class="site-audio__volume" for="site-audio-volume">
+              <span class="site-audio__volume-label">Volume</span>
+              <input class="site-audio__slider" id="site-audio-volume" type="range" min="0" max="100" value="8" />
+            </label>
+            <audio id="site-audio-player" preload="metadata"></audio>
           </div>
           <a class="desktop-nav__item" href="./presentes.html">Presentes</a>
           <button class="desktop-nav__item desktop-nav__action" type="button" data-open-rsvp="true">Confirmar presença</button>
@@ -81,17 +80,6 @@
               Se dispor
             </button>
           </div>
-
-          <section class="gifts-audio" aria-label="Volume da música ambiente">
-            <div class="gifts-audio__controls">
-              <button class="gifts-audio__toggle" id="gifts-audio-toggle" type="button" aria-pressed="false">Play</button>
-            </div>
-            <label class="gifts-audio__volume" for="gifts-audio-volume">
-              <span class="gifts-audio__volume-label">Volume</span>
-              <input class="gifts-audio__slider" id="gifts-audio-volume" type="range" min="0" max="100" value="8" />
-            </label>
-            <audio id="gifts-audio-player" preload="metadata"></audio>
-          </section>
 
           <div class="gifts-stage" id="gifts-stage">
             <section class="gifts-section gifts-panel gifts-panel--active" id="purchase-panel" aria-hidden="false">
