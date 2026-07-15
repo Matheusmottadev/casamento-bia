@@ -519,13 +519,22 @@ function syncSiteAudioTime() {
   persistSiteAudioState();
 }
 
+function restoreSiteAudioTime() {
+  if (!siteAudioPlayer || !siteAudioState.currentTime) return;
+
+  const duration = Number(siteAudioPlayer.duration || 0);
+  const maxRestorableTime = duration > 0 ? Math.max(0, duration - 0.35) : siteAudioState.currentTime;
+  const nextTime = Math.min(siteAudioState.currentTime, maxRestorableTime);
+
+  if (Number.isFinite(nextTime) && nextTime > 0) {
+    siteAudioPlayer.currentTime = nextTime;
+  }
+}
+
 function initSiteAudio() {
   if (!siteAudioPlayer || !siteAudioToggle || !siteAudioVolume) return;
 
   hydrateSiteAudioState();
-  loadSitePlaylistTrack(siteAudioState.currentTrackIndex, { resetTime: false });
-  siteAudioVolume.value = String(siteAudioState.volume);
-  siteAudioPlayer.volume = siteAudioState.volume / 100;
 
   siteAudioPlayer.addEventListener("ended", () => {
     playNextSitePlaylistTrack();
@@ -534,15 +543,14 @@ function initSiteAudio() {
   siteAudioPlayer.addEventListener("play", syncSiteAudioControls);
   siteAudioPlayer.addEventListener("pause", syncSiteAudioControls);
   siteAudioPlayer.addEventListener("timeupdate", syncSiteAudioTime);
-  siteAudioPlayer.addEventListener("loadedmetadata", () => {
-    if (!siteAudioState.currentTime) return;
+  siteAudioPlayer.addEventListener("loadedmetadata", restoreSiteAudioTime);
 
-    const nextTime = Math.min(siteAudioState.currentTime, Math.max(0, siteAudioPlayer.duration - 0.35));
-
-    if (Number.isFinite(nextTime) && nextTime > 0) {
-      siteAudioPlayer.currentTime = nextTime;
-    }
-  });
+  loadSitePlaylistTrack(siteAudioState.currentTrackIndex, { resetTime: false });
+  siteAudioVolume.value = String(siteAudioState.volume);
+  siteAudioPlayer.volume = siteAudioState.volume / 100;
+  if (siteAudioPlayer.readyState >= 1) {
+    restoreSiteAudioTime();
+  }
 
   siteAudioVolume.addEventListener("input", () => {
     siteAudioState.volume = Math.min(100, Math.max(0, Number(siteAudioVolume.value || 0)));
@@ -571,6 +579,7 @@ function initSiteAudio() {
   };
 
   window.addEventListener("beforeunload", syncSiteAudioTime);
+  window.addEventListener("pagehide", syncSiteAudioTime);
   document.addEventListener("click", unlockAutoplay, { passive: true });
   document.addEventListener("touchstart", unlockAutoplay, { passive: true });
   document.addEventListener("keydown", unlockAutoplay, { passive: true });
