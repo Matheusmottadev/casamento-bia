@@ -1,7 +1,7 @@
 {
   "gifts": [
     { "id": "gym-annual", "type": "purchase", "title": "Academia para os noivos entrarem no shape depois da lua de mel", "priceLabel": "R$ 2.388,00" },
-    { "id": "helmet-against-rolling-pin", "type": "purchase", "title": "Capacete contra rolo de macarrao", "priceLabel": "R$ 129,90" },
+    { "id": "helmet-against-rolling-pin", "type": "purchase", "title": "Capacete contra rolo de macarrao", "priceLabel": "R$ 1,00" },
     { "id": "broken-couple-fund", "type": "purchase", "title": "Vaquinha para ajudar os noivos quebrados", "priceLabel": "R$ 250,00" },
     { "id": "groom-massage-after-bill", "type": "purchase", "title": "Massagem relaxante para o noivo depois de ver a conta do casamento", "priceLabel": "R$ 199,90" },
     { "id": "i-did-give-something", "type": "purchase", "title": "So para nao dizerem que eu nao dei nada", "priceLabel": "R$ 50,00" },
