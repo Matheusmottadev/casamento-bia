@@ -428,7 +428,7 @@ button {
   min-height: 740px;
   background:
     linear-gradient(0deg, rgba(24, 20, 14, 0.34), rgba(24, 20, 14, 0.34)),
-    url("../images/hero.png") center center / cover no-repeat;
+    url("../images/hero.webp") center center / cover no-repeat;
 }
 
 .hero__overlay {
