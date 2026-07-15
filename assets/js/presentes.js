@@ -155,7 +155,7 @@ if (purchaseGrid && reservationGrid) {
     {
       id: "market-basket",
       image: "./assets/images/gifts/purchase/market-basket.webp",
-      title: "Cesta de mercado para a despensa ficar cheia e o amor também",
+      title: "Vale Agregado",
       price: "R$ 215,35",
     },
     {
