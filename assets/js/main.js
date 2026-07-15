@@ -423,7 +423,7 @@ async function submitRsvp(event) {
   };
 
   if (!payload.firstName || !payload.lastName || !payload.phone || !payload.guestGroup) {
-    rsvpFeedback.textContent = "Preenche nome, sobrenome, número e selecione se você é padrinho, parente ou amigo.";
+    rsvpFeedback.textContent = "Preenche nome, sobrenome, número e selecione se você é padrinho/madrinha, parente ou amigo.";
     return;
   }
 

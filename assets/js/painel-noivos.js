@@ -79,7 +79,7 @@ function normalizePhone(value) {
 function formatGuestGroup(value) {
   const normalized = String(value || "").trim().toLowerCase();
 
-  if (normalized === "padrinho") return "✔ Padrinho";
+  if (normalized === "padrinho-madrinha") return "✔ Padrinho/Madrinha";
   if (normalized === "parente") return "✔ Parente";
   if (normalized === "amigo") return "✔ Amigo";
   return "✔ Convidado";

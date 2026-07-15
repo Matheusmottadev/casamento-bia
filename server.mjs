@@ -995,7 +995,7 @@ const server = http.createServer(async (request, response) => {
       const lastName = String(payload.lastName || "").trim();
       const phone = String(payload.phone || "").trim();
       const guestGroup = String(payload.guestGroup || "").trim().toLowerCase();
-      const allowedGuestGroups = new Set(["padrinho", "parente", "amigo"]);
+      const allowedGuestGroups = new Set(["padrinho-madrinha", "parente", "amigo"]);
 
       if (!firstName || !lastName || !phone || !allowedGuestGroups.has(guestGroup)) {
         sendJson(response, 400, { error: "Nome, sobrenome, numero e tipo de convidado sao obrigatorios." });

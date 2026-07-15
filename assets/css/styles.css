@@ -1736,12 +1736,14 @@ button {
   margin: 0;
   padding: 0;
   border: 0;
-  display: grid;
-  gap: 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
 }
 
 .rsvp-modal__choices legend {
-  margin-bottom: 0.2rem;
+  margin: 0 0.35rem 0 0;
   font-family: "trajanPro", serif;
   font-size: 0.78rem;
   letter-spacing: 0.05em;
@@ -1761,16 +1763,17 @@ button {
 }
 
 .rsvp-modal__choice span {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  min-height: 52px;
-  padding: 0.95rem 1rem;
+  gap: 0.45rem;
+  min-height: 40px;
+  padding: 0.55rem 0.85rem;
   border: 1px solid rgba(101, 112, 67, 0.28);
-  border-radius: 14px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
   color: #2f3620;
   font-family: "Helvetica Neue", Arial, sans-serif;
-  font-size: 1rem;
+  font-size: 0.96rem;
   font-weight: 500;
   line-height: 1.35;
   transition:
@@ -1778,6 +1781,20 @@ button {
     box-shadow 180ms ease,
     background-color 180ms ease,
     color 180ms ease;
+}
+
+.rsvp-modal__choice span::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(101, 112, 67, 0.45);
+  background: #fff;
+  box-sizing: border-box;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .rsvp-modal__choice input:hover + span {
@@ -1797,6 +1814,11 @@ button {
   box-shadow: 0 0 0 4px rgba(122, 136, 81, 0.12);
   background: rgba(244, 240, 226, 0.96);
   color: #485133;
+}
+
+.rsvp-modal__choice input:checked + span::before {
+  border-color: rgba(101, 112, 67, 0.72);
+  background: radial-gradient(circle at center, #657043 0 4px, #fff 4.5px);
 }
 
 .rsvp-modal__feedback {
