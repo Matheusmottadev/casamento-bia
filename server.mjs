@@ -769,6 +769,15 @@ function parseCurrencyToCents(value) {
   return Math.round(amount * 100);
 }
 
+function parseIntegerEnv(name, fallback) {
+  const rawValue = String(process.env[name] || "").trim();
+
+  if (!rawValue) return fallback;
+
+  const parsed = Number.parseInt(rawValue, 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function normalizePaymentStatus(status) {
   const normalized = String(status || "").toLowerCase();
 
@@ -1078,6 +1087,12 @@ const server = http.createServer(async (request, response) => {
 
       const externalReference = `gift_${Date.now()}`;
       const baseUrl = getAppBaseUrl(request);
+      const maxInstallments = Math.min(Math.max(parseIntegerEnv("MP_MAX_INSTALLMENTS", 12), 1), 36);
+      const defaultInstallments = Math.min(
+        Math.max(parseIntegerEnv("MP_DEFAULT_INSTALLMENTS", 1), 1),
+        maxInstallments,
+      );
+      const differentialPricingId = parseIntegerEnv("MP_DIFFERENTIAL_PRICING_ID", 0);
       const preference = await mercadopagoRequest("/checkout/preferences", {
         method: "POST",
         body: JSON.stringify({
@@ -1091,6 +1106,10 @@ const server = http.createServer(async (request, response) => {
               description: `Presente da lista de casamento para ${firstName} ${lastName}`.slice(0, 255),
             },
           ],
+          payment_methods: {
+            installments: maxInstallments,
+            default_installments: defaultInstallments,
+          },
           external_reference: externalReference,
           notification_url: `${baseUrl}/api/mercado-pago-webhook`,
           back_urls: {
@@ -1106,6 +1125,13 @@ const server = http.createServer(async (request, response) => {
             last_name: lastName,
             phone,
           },
+          ...(differentialPricingId > 0
+            ? {
+                differential_pricing: {
+                  id: differentialPricingId,
+                },
+              }
+            : {}),
         }),
       });
 
