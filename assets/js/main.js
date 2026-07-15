@@ -54,6 +54,7 @@ const siteAudioState = {
   currentTrackIndex: 0,
   shouldPlay: true,
   volume: 8,
+  currentTime: 0,
   autoplayUnlocked: false,
 };
 
@@ -433,6 +434,7 @@ function persistSiteAudioState() {
         currentTrackIndex: siteAudioState.currentTrackIndex,
         shouldPlay: siteAudioState.shouldPlay,
         volume: siteAudioState.volume,
+        currentTime: siteAudioState.currentTime,
       }),
     );
   } catch {
@@ -450,15 +452,19 @@ function hydrateSiteAudioState() {
     siteAudioState.currentTrackIndex = Number(parsedState.currentTrackIndex || 0) % sitePlaylist.length;
     siteAudioState.shouldPlay = parsedState.shouldPlay !== false;
     siteAudioState.volume = Math.min(100, Math.max(0, Number(parsedState.volume ?? 8)));
+    siteAudioState.currentTime = Math.max(0, Number(parsedState.currentTime || 0));
   } catch {
     // ignore storage errors
   }
 }
 
-function loadSitePlaylistTrack(trackIndex) {
+function loadSitePlaylistTrack(trackIndex, { resetTime = true } = {}) {
   if (!siteAudioPlayer) return;
 
   siteAudioState.currentTrackIndex = (trackIndex + sitePlaylist.length) % sitePlaylist.length;
+  if (resetTime) {
+    siteAudioState.currentTime = 0;
+  }
   siteAudioPlayer.src = sitePlaylist[siteAudioState.currentTrackIndex].src;
   siteAudioPlayer.load();
   persistSiteAudioState();
@@ -477,7 +483,7 @@ async function playSitePlaylistTrack(trackIndex = siteAudioState.currentTrackInd
   if (!siteAudioPlayer) return;
 
   if (siteAudioPlayer.src !== new URL(sitePlaylist[trackIndex].src, window.location.href).href) {
-    loadSitePlaylistTrack(trackIndex);
+    loadSitePlaylistTrack(trackIndex, { resetTime: false });
   }
 
   try {
@@ -506,11 +512,18 @@ function playNextSitePlaylistTrack() {
   playSitePlaylistTrack(siteAudioState.currentTrackIndex);
 }
 
+function syncSiteAudioTime() {
+  if (!siteAudioPlayer) return;
+
+  siteAudioState.currentTime = Math.max(0, Number(siteAudioPlayer.currentTime || 0));
+  persistSiteAudioState();
+}
+
 function initSiteAudio() {
   if (!siteAudioPlayer || !siteAudioToggle || !siteAudioVolume) return;
 
   hydrateSiteAudioState();
-  loadSitePlaylistTrack(siteAudioState.currentTrackIndex);
+  loadSitePlaylistTrack(siteAudioState.currentTrackIndex, { resetTime: false });
   siteAudioVolume.value = String(siteAudioState.volume);
   siteAudioPlayer.volume = siteAudioState.volume / 100;
 
@@ -520,6 +533,16 @@ function initSiteAudio() {
 
   siteAudioPlayer.addEventListener("play", syncSiteAudioControls);
   siteAudioPlayer.addEventListener("pause", syncSiteAudioControls);
+  siteAudioPlayer.addEventListener("timeupdate", syncSiteAudioTime);
+  siteAudioPlayer.addEventListener("loadedmetadata", () => {
+    if (!siteAudioState.currentTime) return;
+
+    const nextTime = Math.min(siteAudioState.currentTime, Math.max(0, siteAudioPlayer.duration - 0.35));
+
+    if (Number.isFinite(nextTime) && nextTime > 0) {
+      siteAudioPlayer.currentTime = nextTime;
+    }
+  });
 
   siteAudioVolume.addEventListener("input", () => {
     siteAudioState.volume = Math.min(100, Math.max(0, Number(siteAudioVolume.value || 0)));
@@ -547,6 +570,7 @@ function initSiteAudio() {
     await playSitePlaylistTrack(siteAudioState.currentTrackIndex);
   };
 
+  window.addEventListener("beforeunload", syncSiteAudioTime);
   document.addEventListener("click", unlockAutoplay, { passive: true });
   document.addEventListener("touchstart", unlockAutoplay, { passive: true });
   document.addEventListener("keydown", unlockAutoplay, { passive: true });
