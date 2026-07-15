@@ -1,6 +1,7 @@
 const reservationGiftBody = document.querySelector("#reservationGiftBody");
 const reservationsCard = document.querySelector("#reservationsCard");
 const purchasesCard = document.querySelector("#purchasesCard");
+const donationsCard = document.querySelector("#donationsCard");
 const confirmationsCard = document.querySelector("#confirmationsCard");
 const statusDot = document.querySelector("#statusDot");
 const statusText = document.querySelector("#statusText");
@@ -56,6 +57,17 @@ function normalizePaymentStatus(status) {
   }
 
   return normalized || "unknown";
+}
+
+function normalizeIdentityPart(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function normalizePhone(value) {
+  return String(value || "").replace(/\D/g, "");
 }
 
 function emptyState(title, subtitle) {
@@ -201,7 +213,76 @@ function renderPurchases(list) {
             <span class="mini-name">${escapeHtml(`${purchase.firstName} ${purchase.lastName}`.trim() || "-")}</span>
             <span class="mini-date">${formatDate(purchase.createdAt)}</span>
           </div>
-          <div class="mini-sub">${escapeHtml(purchase.giftTitle)}</div>
+          <div class="mini-sub">${escapeHtml(purchase.giftTitle)} foi comprado por ${escapeHtml(`${purchase.firstName} ${purchase.lastName}`.trim() || "-")}</div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderDonations(list) {
+  if (!donationsCard) return;
+
+  const approvedPurchases = list.filter((purchase) => normalizePaymentStatus(purchase.paymentStatus) === "paid");
+
+  if (!approvedPurchases.length) {
+    donationsCard.innerHTML = emptyState(
+      "Nenhuma doação registrada",
+      "As compras aprovadas vão aparecer somadas por pessoa aqui.",
+    );
+    return;
+  }
+
+  const grouped = new Map();
+
+  for (const purchase of approvedPurchases) {
+    const firstName = String(purchase.firstName || "").trim();
+    const lastName = String(purchase.lastName || "").trim();
+    const phone = String(purchase.phone || "").trim();
+    const key = [
+      normalizeIdentityPart(firstName),
+      normalizeIdentityPart(lastName),
+      normalizePhone(phone),
+    ].join("|");
+
+    const existing = grouped.get(key);
+
+    if (existing) {
+      existing.amountTotal += Number(purchase.amountTotal || 0);
+      existing.purchaseCount += 1;
+      if (new Date(purchase.createdAt).getTime() > new Date(existing.lastPurchaseAt).getTime()) {
+        existing.lastPurchaseAt = purchase.createdAt;
+      }
+      continue;
+    }
+
+    grouped.set(key, {
+      firstName,
+      lastName,
+      phone,
+      amountTotal: Number(purchase.amountTotal || 0),
+      purchaseCount: 1,
+      lastPurchaseAt: purchase.createdAt,
+    });
+  }
+
+  const donations = [...grouped.values()].sort((left, right) => {
+    if (right.amountTotal !== left.amountTotal) {
+      return right.amountTotal - left.amountTotal;
+    }
+
+    return `${left.firstName} ${left.lastName}`.localeCompare(`${right.firstName} ${right.lastName}`);
+  });
+
+  donationsCard.innerHTML = donations
+    .map(
+      (donation) => `
+        <div class="mini-row">
+          <div class="mini-top">
+            <span class="mini-name">${escapeHtml(`${donation.firstName} ${donation.lastName}`.trim() || "-")}</span>
+            <span class="mini-value">${formatCurrencyFromCents(donation.amountTotal, "brl")}</span>
+          </div>
+          <div class="mini-sub">${escapeHtml(donation.phone || "-")}</div>
         </div>
       `,
     )
@@ -274,6 +355,7 @@ async function loadCoupleDashboard() {
     renderReservationGifts((data.gifts || []).filter((gift) => gift.type === "reservation"));
     renderReservations(data.reservations || []);
     renderPurchases(data.purchases || []);
+    renderDonations(data.purchases || []);
     renderConfirmations(data.rsvps || []);
     setStatus("ok", new Date().toISOString());
   } catch (error) {
