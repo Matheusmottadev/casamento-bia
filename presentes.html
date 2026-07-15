@@ -214,6 +214,22 @@
             <input id="rsvp-phone" name="phone" type="tel" maxlength="40" placeholder="Seu WhatsApp ou telefone" required />
           </label>
 
+          <fieldset class="rsvp-modal__choices">
+            <legend>Você é</legend>
+            <label class="rsvp-modal__choice">
+              <input name="guestGroup" type="radio" value="padrinho" required />
+              <span>✔️ Padrinho</span>
+            </label>
+            <label class="rsvp-modal__choice">
+              <input name="guestGroup" type="radio" value="parente" required />
+              <span>✔️ Parente</span>
+            </label>
+            <label class="rsvp-modal__choice">
+              <input name="guestGroup" type="radio" value="amigo" required />
+              <span>✔️ Amigo</span>
+            </label>
+          </fieldset>
+
           <p class="rsvp-modal__feedback" id="rsvp-feedback" aria-live="polite"></p>
           <button class="ghost-button ghost-button--solid rsvp-modal__submit" type="submit">Confirmar presença</button>
         </form>

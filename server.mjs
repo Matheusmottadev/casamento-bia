@@ -151,8 +151,14 @@ async function ensureDatabase() {
       first_name TEXT NOT NULL,
       last_name TEXT NOT NULL,
       phone TEXT NOT NULL,
+      guest_group TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+
+  await execute(`
+    ALTER TABLE rsvps
+    ADD COLUMN IF NOT EXISTS guest_group TEXT NOT NULL DEFAULT '';
   `);
 
   await execute(`
@@ -366,7 +372,7 @@ async function readRsvps() {
   }
 
   return query(`
-    SELECT id, first_name AS "firstName", last_name AS "lastName", phone, created_at AS "createdAt"
+    SELECT id, first_name AS "firstName", last_name AS "lastName", phone, guest_group AS "guestGroup", created_at AS "createdAt"
     FROM rsvps
     ORDER BY created_at DESC;
   `);
@@ -501,7 +507,7 @@ async function createGiftReservation({ giftId, name, contact = "" }) {
   return readGiftReservations();
 }
 
-async function createRsvp({ firstName, lastName, phone }) {
+async function createRsvp({ firstName, lastName, phone, guestGroup }) {
   if (!pool) {
     const rsvps = await readLegacyStore(rsvpsFile, "rsvps");
     rsvps.unshift({
@@ -509,6 +515,7 @@ async function createRsvp({ firstName, lastName, phone }) {
       firstName: firstName.slice(0, 80),
       lastName: lastName.slice(0, 80),
       phone: phone.slice(0, 40),
+      guestGroup: guestGroup.slice(0, 30),
       createdAt: new Date().toISOString(),
     });
     await writeLocalStore(rsvpsFile, "rsvps", rsvps);
@@ -517,10 +524,10 @@ async function createRsvp({ firstName, lastName, phone }) {
 
   await query(
     `
-      INSERT INTO rsvps (first_name, last_name, phone)
-      VALUES ($1, $2, $3);
+      INSERT INTO rsvps (first_name, last_name, phone, guest_group)
+      VALUES ($1, $2, $3, $4);
     `,
-    [firstName.slice(0, 80), lastName.slice(0, 80), phone.slice(0, 40)],
+    [firstName.slice(0, 80), lastName.slice(0, 80), phone.slice(0, 40), guestGroup.slice(0, 30)],
   );
 
   return readRsvps();
@@ -987,9 +994,11 @@ const server = http.createServer(async (request, response) => {
       const firstName = String(payload.firstName || "").trim();
       const lastName = String(payload.lastName || "").trim();
       const phone = String(payload.phone || "").trim();
+      const guestGroup = String(payload.guestGroup || "").trim().toLowerCase();
+      const allowedGuestGroups = new Set(["padrinho", "parente", "amigo"]);
 
-      if (!firstName || !lastName || !phone) {
-        sendJson(response, 400, { error: "Nome, sobrenome e numero sao obrigatorios." });
+      if (!firstName || !lastName || !phone || !allowedGuestGroups.has(guestGroup)) {
+        sendJson(response, 400, { error: "Nome, sobrenome, numero e tipo de convidado sao obrigatorios." });
         return;
       }
 
@@ -997,6 +1006,7 @@ const server = http.createServer(async (request, response) => {
         firstName: escapeHtml(firstName),
         lastName: escapeHtml(lastName),
         phone: escapeHtml(phone),
+        guestGroup: escapeHtml(guestGroup),
       });
 
       sendJson(response, 200, { rsvps });

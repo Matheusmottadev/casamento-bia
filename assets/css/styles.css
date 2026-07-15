@@ -1732,6 +1732,73 @@ button {
   background: #fff;
 }
 
+.rsvp-modal__choices {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.rsvp-modal__choices legend {
+  margin-bottom: 0.2rem;
+  font-family: "trajanPro", serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  color: var(--text);
+}
+
+.rsvp-modal__choice {
+  position: relative;
+  display: block;
+}
+
+.rsvp-modal__choice input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.rsvp-modal__choice span {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(101, 112, 67, 0.28);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2f3620;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.35;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.rsvp-modal__choice input:hover + span {
+  border-color: rgba(101, 112, 67, 0.48);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.rsvp-modal__choice input:focus-visible + span {
+  outline: none;
+  border-color: rgba(101, 112, 67, 0.62);
+  box-shadow: 0 0 0 4px rgba(122, 136, 81, 0.14);
+  background: #fff;
+}
+
+.rsvp-modal__choice input:checked + span {
+  border-color: rgba(101, 112, 67, 0.62);
+  box-shadow: 0 0 0 4px rgba(122, 136, 81, 0.12);
+  background: rgba(244, 240, 226, 0.96);
+  color: #485133;
+}
+
 .rsvp-modal__feedback {
   min-height: 1.2rem;
   margin: 0;

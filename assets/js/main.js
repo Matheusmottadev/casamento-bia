@@ -419,10 +419,11 @@ async function submitRsvp(event) {
     firstName: String(formData.get("firstName") || "").trim(),
     lastName: String(formData.get("lastName") || "").trim(),
     phone: sanitizePhone(formData.get("phone") || ""),
+    guestGroup: String(formData.get("guestGroup") || "").trim().toLowerCase(),
   };
 
-  if (!payload.firstName || !payload.lastName || !payload.phone) {
-    rsvpFeedback.textContent = "Preenche nome, sobrenome e número para confirmar sua presença.";
+  if (!payload.firstName || !payload.lastName || !payload.phone || !payload.guestGroup) {
+    rsvpFeedback.textContent = "Preenche nome, sobrenome, número e selecione se você é padrinho, parente ou amigo.";
     return;
   }
 

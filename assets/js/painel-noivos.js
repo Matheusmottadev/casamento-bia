@@ -76,6 +76,15 @@ function normalizePhone(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
+function formatGuestGroup(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  if (normalized === "padrinho") return "✔ Padrinho";
+  if (normalized === "parente") return "✔ Parente";
+  if (normalized === "amigo") return "✔ Amigo";
+  return "✔ Convidado";
+}
+
 function emptyState(title, subtitle) {
   return `
     <div class="empty">
@@ -351,7 +360,7 @@ function renderConfirmations(list) {
             <span class="mini-name">${escapeHtml(`${confirmation.firstName} ${confirmation.lastName}`.trim())}</span>
             <span class="mini-date">${formatDate(confirmation.createdAt)}</span>
           </div>
-          <div class="mini-sub">${escapeHtml(confirmation.phone || "-")}</div>
+          <div class="mini-sub">${escapeHtml(formatGuestGroup(confirmation.guestGroup))} · ${escapeHtml(confirmation.phone || "-")}</div>
         </div>
       `,
     )
