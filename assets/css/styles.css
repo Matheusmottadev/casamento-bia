@@ -1827,7 +1827,7 @@ button {
   color: #2f3620;
   font-family: "Helvetica Neue", Arial, sans-serif;
   font-size: 0.96rem;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.35;
   transition:
     border-color 180ms ease,
