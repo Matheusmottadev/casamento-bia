@@ -517,16 +517,6 @@
     <section>
       <div class="section-head">
         <div>
-          <h2>Total de doações</h2>
-          <p>Soma das compras aprovadas por pessoa, sem repetir nome e telefone.</p>
-        </div>
-      </div>
-      <div class="card" id="donationsCard"></div>
-    </section>
-
-    <section>
-      <div class="section-head">
-        <div>
           <h2>Presenças</h2>
           <p>Convidados que já confirmaram.</p>
         </div>
@@ -535,6 +525,30 @@
     </section>
 
   </div>
+
+  <section>
+    <div class="section-head">
+      <div>
+        <h2>Total de doações</h2>
+        <p>Soma das compras aprovadas por pessoa, sem repetir nome e telefone.</p>
+      </div>
+      <span class="section-count" id="donationCount"></span>
+    </div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome e contato</th>
+            <th class="num">Compras aprovadas</th>
+            <th class="num">Valor total</th>
+          </tr>
+        </thead>
+        <tbody id="donationsBody">
+          <!-- preenchido via JS -->
+        </tbody>
+      </table>
+    </div>
+  </section>
 
   <footer>Painel de consulta — atualizado automaticamente, sem edição manual.</footer>
 

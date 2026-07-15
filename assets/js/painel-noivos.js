@@ -1,11 +1,12 @@
 const reservationGiftBody = document.querySelector("#reservationGiftBody");
 const reservationsCard = document.querySelector("#reservationsCard");
 const purchasesCard = document.querySelector("#purchasesCard");
-const donationsCard = document.querySelector("#donationsCard");
+const donationsBody = document.querySelector("#donationsBody");
 const confirmationsCard = document.querySelector("#confirmationsCard");
 const statusDot = document.querySelector("#statusDot");
 const statusText = document.querySelector("#statusText");
 const reservationGiftCount = document.querySelector("#reservationGiftCount");
+const donationCount = document.querySelector("#donationCount");
 const confirmMetric = document.querySelector("#mConfirm");
 const reservedMetric = document.querySelector("#mReserved");
 const purchasesMetric = document.querySelector("#mPurchases");
@@ -221,15 +222,19 @@ function renderPurchases(list) {
 }
 
 function renderDonations(list) {
-  if (!donationsCard) return;
+  if (!donationsBody) return;
 
   const approvedPurchases = list.filter((purchase) => normalizePaymentStatus(purchase.paymentStatus) === "paid");
 
+  if (donationCount) {
+    donationCount.textContent = `${approvedPurchases.length} compras aprovadas`;
+  }
+
   if (!approvedPurchases.length) {
-    donationsCard.innerHTML = emptyState(
+    donationsBody.innerHTML = `<tr><td colspan="3" style="padding:0;">${emptyState(
       "Nenhuma doação registrada",
       "As compras aprovadas vão aparecer somadas por pessoa aqui.",
-    );
+    )}</td></tr>`;
     return;
   }
 
@@ -274,16 +279,21 @@ function renderDonations(list) {
     return `${left.firstName} ${left.lastName}`.localeCompare(`${right.firstName} ${right.lastName}`);
   });
 
-  donationsCard.innerHTML = donations
+  if (donationCount) {
+    donationCount.textContent = `${donations.length} pessoas`;
+  }
+
+  donationsBody.innerHTML = donations
     .map(
       (donation) => `
-        <div class="mini-row">
-          <div class="mini-top">
-            <span class="mini-name">${escapeHtml(`${donation.firstName} ${donation.lastName}`.trim() || "-")}</span>
-            <span class="mini-value">${formatCurrencyFromCents(donation.amountTotal, "brl")}</span>
-          </div>
-          <div class="mini-sub">${escapeHtml(donation.phone || "-")}</div>
-        </div>
+        <tr>
+          <td class="gift-cell" data-label="Nome e contato">
+            <span class="gift-name">${escapeHtml(`${donation.firstName} ${donation.lastName}`.trim() || "-")}</span>
+            <span class="gift-type">${escapeHtml(donation.phone || "-")}</span>
+          </td>
+          <td class="num" data-label="Compras aprovadas">${Number(donation.purchaseCount || 0)}</td>
+          <td class="num" data-label="Valor total">${formatCurrencyFromCents(donation.amountTotal, "brl")}</td>
+        </tr>
       `,
     )
     .join("");
