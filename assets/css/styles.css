@@ -1351,6 +1351,10 @@ button {
   display: block;
 }
 
+.gift-card__photo--contain {
+  object-fit: contain;
+}
+
 .gift-card__placeholder {
   display: grid;
   place-items: center;

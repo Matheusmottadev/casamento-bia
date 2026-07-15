@@ -209,6 +209,7 @@ if (purchaseGrid && reservationGrid) {
     {
       id: "buffet-first-pass",
       image: "./assets/images/gifts/purchase/buffet-first-pass-user.png",
+      imageFit: "contain",
       title: "Vale ser o primeiro do Buffet",
       price: "R$ 999,90",
     },
@@ -397,6 +398,23 @@ if (purchaseGrid && reservationGrid) {
     return items.slice(0, visibleCount);
   }
 
+  function measurePanelContentHeight(panel) {
+    if (!panel) return 0;
+
+    const visibleChildren = [...panel.children].filter((child) => !child.hidden);
+
+    if (!visibleChildren.length) {
+      return 0;
+    }
+
+    const panelTop = panel.getBoundingClientRect().top;
+    const lastChildBottom = Math.max(
+      ...visibleChildren.map((child) => child.getBoundingClientRect().bottom),
+    );
+
+    return Math.ceil(lastChildBottom - panelTop);
+  }
+
   function resizeGiftsStage(immediate = false) {
     if (!giftsStage) return;
 
@@ -409,7 +427,7 @@ if (purchaseGrid && reservationGrid) {
 
     if (!activePanel) return;
 
-    const nextHeight = activePanel.scrollHeight;
+    const nextHeight = measurePanelContentHeight(activePanel);
 
     if (immediate) {
       giftsStage.style.height = `${nextHeight}px`;
@@ -452,7 +470,7 @@ if (purchaseGrid && reservationGrid) {
             <div class="gift-card__media">
               ${
                 gift.image
-                  ? `<img class="gift-card__photo" src="${gift.image}" alt="${escapeHtml(gift.title)}" loading="lazy" decoding="async" />`
+                  ? `<img class="gift-card__photo${gift.imageFit === "contain" ? " gift-card__photo--contain" : ""}" src="${gift.image}" alt="${escapeHtml(gift.title)}" loading="lazy" decoding="async" />`
                   : `<span class="gift-card__emoji ${gift.emojiClass || ""}" aria-hidden="true">${gift.emoji}</span>`
               }
             </div>
