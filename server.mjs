@@ -1118,6 +1118,13 @@ const server = http.createServer(async (request, response) => {
             installments: maxInstallments,
             default_installments: defaultInstallments,
           },
+          payer: {
+            name: firstName,
+            surname: lastName,
+            phone: {
+              number: phone,
+            },
+          },
           external_reference: externalReference,
           notification_url: `${baseUrl}/api/mercado-pago-webhook`,
           back_urls: {
