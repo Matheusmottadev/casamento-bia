@@ -577,29 +577,13 @@ if (purchaseGrid && reservationGrid) {
   }
 
   function renderReservationGifts() {
-    const availableGifts = reservationGifts.filter((gift) => gift.quantity - getReservedCount(gift.id) > 0);
-
-    if (!availableGifts.length) {
-      reservationGrid.innerHTML = `
-        <div class="gift-card gift-card--empty">
-          <div class="gift-card__body">
-            <p class="gift-card__title">Todos os presentes dessa lista já foram escolhidos. Obrigado pelo carinho com a nossa casa!</p>
-          </div>
-        </div>
-      `;
-      updateLoadMoreButton(reservationLoadMore, false);
-      if (giftsViewState.currentView === "reservation") {
-        resizeGiftsStage(true);
-      }
-      return;
-    }
-
-    const visibleReservationGifts = getVisibleGifts(availableGifts, paginationState.reservationVisibleCount);
+    const visibleReservationGifts = getVisibleGifts(reservationGifts, paginationState.reservationVisibleCount);
 
     reservationGrid.innerHTML = visibleReservationGifts
       .map((gift) => {
         const remaining = gift.quantity - getReservedCount(gift.id);
-        const availabilityText = remaining > 1 ? `${remaining} disponiveis` : "Ultima unidade";
+        const isSoldOut = remaining <= 0;
+        const availabilityText = isSoldOut ? "Esgotado" : remaining > 1 ? `${remaining} disponiveis` : "1 unidade";
 
         return `
           <article class="gift-card gift-card--reservation">
@@ -626,11 +610,13 @@ if (purchaseGrid && reservationGrid) {
               }
             </div>
             <div class="gift-card__body">
-              <span class="gift-card__badge">${availabilityText}</span>
+              <span class="gift-card__badge${isSoldOut ? " gift-card__badge--sold-out" : ""}">${availabilityText}</span>
               <p class="gift-card__title">${escapeHtml(gift.title)}</p>
               ${gift.note ? `<p class="gift-card__note">${escapeHtml(gift.note)}</p>` : ""}
-              <button class="ghost-button gift-card__button gift-card__button--reserve" type="button" data-reserve-id="${gift.id}">
-                Eu quero dar esse
+              <button class="ghost-button gift-card__button gift-card__button--reserve" type="button" data-reserve-id="${gift.id}"${
+                isSoldOut ? " disabled" : ""
+              }>
+                ${isSoldOut ? "Esgotado" : "Eu quero dar esse"}
               </button>
             </div>
           </article>
@@ -638,7 +624,7 @@ if (purchaseGrid && reservationGrid) {
       })
       .join("");
 
-    updateLoadMoreButton(reservationLoadMore, visibleReservationGifts.length < availableGifts.length);
+    updateLoadMoreButton(reservationLoadMore, visibleReservationGifts.length < reservationGifts.length);
 
     if (giftsViewState.currentView === "reservation") {
       resizeGiftsStage(true);

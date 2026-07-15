@@ -12,20 +12,32 @@
   <body>
     <main class="dashboard-page">
       <section class="dashboard-shell">
-        <p class="status-card__eyebrow">Painel dos noivos</p>
-        <h1 class="status-card__title">Base de presentes e confirmações</h1>
-        <p class="status-card__copy" id="dashboard-feedback">Preparando a visão geral do casamento.</p>
+        <div class="dashboard-hero">
+          <div>
+            <p class="status-card__eyebrow">Painel dos noivos</p>
+            <h1 class="status-card__title">Base de presentes e confirmações</h1>
+            <p class="status-card__copy" id="dashboard-feedback">Preparando a visão geral do casamento.</p>
+          </div>
+          <div class="dashboard-hero__meta" id="dashboard-meta">Atualizando...</div>
+        </div>
 
         <section class="dashboard-summary" id="dashboard-summary"></section>
 
-        <section class="dashboard-block">
-          <h2 class="dashboard-block__title">Presentes</h2>
+        <div class="dashboard-grid">
+        <section class="dashboard-block dashboard-block--wide">
+          <div class="dashboard-block__header">
+            <div>
+              <h2 class="dashboard-block__title">Presentes</h2>
+              <p class="dashboard-block__copy">Visão geral da lista, com disponibilidade e andamento de cada item.</p>
+            </div>
+          </div>
           <div class="dashboard-table-wrap">
             <table class="dashboard-table">
               <thead>
                 <tr>
                   <th>Presente</th>
                   <th>Tipo</th>
+                  <th>Status</th>
                   <th>Qtde</th>
                   <th>Reservados</th>
                   <th>Pagos</th>
@@ -38,7 +50,12 @@
         </section>
 
         <section class="dashboard-block">
-          <h2 class="dashboard-block__title">Reservas de presentes</h2>
+          <div class="dashboard-block__header">
+            <div>
+              <h2 class="dashboard-block__title">Reservas de presentes</h2>
+              <p class="dashboard-block__copy">Quem se dispôs a levar um item da lista física.</p>
+            </div>
+          </div>
           <div class="dashboard-table-wrap">
             <table class="dashboard-table">
               <thead>
@@ -55,7 +72,12 @@
         </section>
 
         <section class="dashboard-block">
-          <h2 class="dashboard-block__title">Compras online</h2>
+          <div class="dashboard-block__header">
+            <div>
+              <h2 class="dashboard-block__title">Compras online</h2>
+              <p class="dashboard-block__copy">Pagamentos feitos pelo Mercado Pago e o status de cada tentativa.</p>
+            </div>
+          </div>
           <div class="dashboard-table-wrap">
             <table class="dashboard-table">
               <thead>
@@ -72,8 +94,13 @@
           </div>
         </section>
 
-        <section class="dashboard-block">
-          <h2 class="dashboard-block__title">Confirmações de presença</h2>
+        <section class="dashboard-block dashboard-block--wide">
+          <div class="dashboard-block__header">
+            <div>
+              <h2 class="dashboard-block__title">Confirmações de presença</h2>
+              <p class="dashboard-block__copy">Lista de convidados que já responderam pelo site.</p>
+            </div>
+          </div>
           <div class="dashboard-table-wrap">
             <table class="dashboard-table">
               <thead>
@@ -87,6 +114,7 @@
             </table>
           </div>
         </section>
+        </div>
       </section>
     </main>
 
