@@ -143,7 +143,7 @@ if (purchaseGrid && reservationGrid) {
       price: "R$ 389,70",
     },
     {
-      id: "robot-vacuum",
+      id: "robot-vacuum-fund",
       image: "./assets/images/gifts/purchase/robot-vacuum.jpg",
       title: "Robô aspirador para limpar o chão enquanto o casal ignora a bagunça",
       price: "R$ 1.199,00",

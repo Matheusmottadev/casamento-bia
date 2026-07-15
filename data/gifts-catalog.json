@@ -15,7 +15,7 @@
     { "id": "plates", "type": "purchase", "title": "Jogo de pratos chique para o casal fingir que janta assim todo dia", "priceLabel": "R$ 312,40" },
     { "id": "wine-cellar", "type": "purchase", "title": "Adega para o casal organizar os vinhos e a vida em uma mesma prateleira", "priceLabel": "R$ 649,90" },
     { "id": "airfryer", "type": "purchase", "title": "Air fryer oficial das visitas inesperadas e da batata frita de madrugada", "priceLabel": "R$ 389,70" },
-    { "id": "robot-vacuum", "type": "purchase", "title": "Robô aspirador para limpar o chão enquanto o casal ignora a bagunça", "priceLabel": "R$ 1.199,00" },
+    { "id": "robot-vacuum-fund", "type": "purchase", "title": "Robô aspirador para limpar o chão enquanto o casal ignora a bagunça", "priceLabel": "R$ 1.199,00" },
     { "id": "coffee", "type": "purchase", "title": "Cafeteira para manter o romance vivo antes de qualquer conversa séria", "priceLabel": "R$ 284,55" },
     { "id": "bed-linen", "type": "purchase", "title": "Jogo de cama premium para domingos de preguiça profissional", "priceLabel": "R$ 459,80" },
     { "id": "travel-help", "type": "purchase", "title": "Ajuda estratégica para a próxima viagem e para o casal sumir um pouco", "priceLabel": "R$ 720,00" },
