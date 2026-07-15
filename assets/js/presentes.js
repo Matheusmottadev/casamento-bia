@@ -215,15 +215,15 @@ if (purchaseGrid && reservationGrid) {
     },
     {
       id: "plus-one-intruder",
+      image: "./assets/images/gifts/purchase/plus-one-intruder-user.webp",
       title: "Levar alguém que não foi convidado",
       price: "R$ 1.699,90",
-      emoji: "🙈",
     },
     {
       id: "groom-hair-and-beard",
+      image: "./assets/images/gifts/purchase/groom-hair-and-beard-user.webp",
       title: "6 meses de cabelo e barba do noivo",
       price: "R$ 79,90",
-      emoji: "💈",
     },
     {
       id: "custom-gift",
