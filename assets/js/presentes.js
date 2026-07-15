@@ -62,7 +62,7 @@ if (purchaseGrid && reservationGrid) {
       id: "helmet-against-rolling-pin",
       image: "./assets/images/gifts/purchase/helmet-against-rolling-pin-user.png",
       title: "Capacete contra rolo de macarrao",
-      price: "R$ 1,00",
+      price: "R$ 10,00",
     },
     {
       id: "broken-couple-fund",
