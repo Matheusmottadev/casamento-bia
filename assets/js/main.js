@@ -613,7 +613,16 @@ async function submitRsvp(event) {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      let errorMessage = `HTTP ${response.status}`;
+
+      try {
+        const errorPayload = await response.json();
+        errorMessage = String(errorPayload.error || errorMessage);
+      } catch {
+        // fallback to generic status message below
+      }
+
+      throw new Error(errorMessage);
     }
 
     rsvpForm.reset();
@@ -623,7 +632,10 @@ async function submitRsvp(event) {
     }, 650);
   } catch (error) {
     console.error("Nao foi possivel confirmar a presenca.", error);
-    rsvpFeedback.textContent = "Nao foi possivel confirmar sua presença agora.";
+    rsvpFeedback.textContent =
+      error instanceof Error && error.message
+        ? error.message
+        : "Nao foi possivel confirmar sua presença agora.";
   }
 }
 

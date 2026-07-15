@@ -2280,6 +2280,11 @@ button {
     width: min(170px, 48vw);
   }
 
+  .gifts-grid--home {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
   .gift-card {
     gap: 0.9rem;
     padding: 0.9rem 0.9rem 1rem;

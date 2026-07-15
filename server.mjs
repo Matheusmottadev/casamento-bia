@@ -426,6 +426,27 @@ function hashIp(ipAddress) {
   return createHash("sha256").update(ipAddress).digest("hex");
 }
 
+function normalizeComparisonText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function normalizePhoneDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+class DuplicateRsvpError extends Error {
+  constructor(existingRsvp) {
+    super("Esse convidado ja confirmou presenca.");
+    this.name = "DuplicateRsvpError";
+    this.existingRsvp = existingRsvp;
+  }
+}
+
 function getClientIp(request) {
   const forwardedFor = request.headers["x-forwarded-for"];
   const firstForwarded = typeof forwardedFor === "string" ? forwardedFor.split(",")[0].trim() : "";
@@ -508,8 +529,26 @@ async function createGiftReservation({ giftId, name, contact = "" }) {
 }
 
 async function createRsvp({ firstName, lastName, phone, guestGroup }) {
+  const normalizedFirstName = normalizeComparisonText(firstName);
+  const normalizedLastName = normalizeComparisonText(lastName);
+  const normalizedFullName = `${normalizedFirstName} ${normalizedLastName}`.trim();
+  const normalizedPhone = normalizePhoneDigits(phone);
+
+  const isSameRsvpPerson = (item) => {
+    const itemFullName = `${normalizeComparisonText(item.firstName)} ${normalizeComparisonText(item.lastName)}`.trim();
+    const itemPhone = normalizePhoneDigits(item.phone);
+
+    return (normalizedPhone && itemPhone === normalizedPhone) || (normalizedFullName && itemFullName === normalizedFullName);
+  };
+
   if (!pool) {
     const rsvps = await readLegacyStore(rsvpsFile, "rsvps");
+    const existingRsvp = rsvps.find(isSameRsvpPerson);
+
+    if (existingRsvp) {
+      throw new DuplicateRsvpError(existingRsvp);
+    }
+
     rsvps.unshift({
       id: Date.now(),
       firstName: firstName.slice(0, 80),
@@ -520,6 +559,12 @@ async function createRsvp({ firstName, lastName, phone, guestGroup }) {
     });
     await writeLocalStore(rsvpsFile, "rsvps", rsvps);
     return rsvps;
+  }
+
+  const existingRsvp = (await readRsvps()).find(isSameRsvpPerson);
+
+  if (existingRsvp) {
+    throw new DuplicateRsvpError(existingRsvp);
   }
 
   await query(
@@ -1011,6 +1056,15 @@ const server = http.createServer(async (request, response) => {
 
       sendJson(response, 200, { rsvps });
     } catch (error) {
+      if (error instanceof DuplicateRsvpError) {
+        sendJson(response, 409, {
+          error: "Essa pessoa ja confirmou presenca anteriormente.",
+          duplicate: true,
+          existingRsvp: error.existingRsvp ?? null,
+        });
+        return;
+      }
+
       console.error("Erro ao salvar confirmacao de presenca:", error);
       sendJson(response, 500, { error: "Nao foi possivel salvar a confirmacao." });
     }
