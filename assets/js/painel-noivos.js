@@ -1,10 +1,12 @@
-const giftBody = document.querySelector("#giftBody");
+const purchaseGiftBody = document.querySelector("#purchaseGiftBody");
+const reservationGiftBody = document.querySelector("#reservationGiftBody");
 const reservationsCard = document.querySelector("#reservationsCard");
 const purchasesCard = document.querySelector("#purchasesCard");
 const confirmationsCard = document.querySelector("#confirmationsCard");
 const statusDot = document.querySelector("#statusDot");
 const statusText = document.querySelector("#statusText");
-const giftCount = document.querySelector("#giftCount");
+const purchaseGiftCount = document.querySelector("#purchaseGiftCount");
+const reservationGiftCount = document.querySelector("#reservationGiftCount");
 const confirmMetric = document.querySelector("#mConfirm");
 const reservedMetric = document.querySelector("#mReserved");
 const purchasesMetric = document.querySelector("#mPurchases");
@@ -78,7 +80,7 @@ function giftStatusBadge(gift) {
   }
 
   if (Number(gift.pendingCount || 0) > 0) {
-    return '<span class="badge pending">Pendente</span>';
+    return '<span class="badge pending">Checkout iniciado</span>';
   }
 
   return '<span class="badge available">Disponível</span>';
@@ -92,7 +94,7 @@ function purchaseStatusBadge(status) {
   }
 
   if (["pending", "in_process", "authorized"].includes(normalized)) {
-    return '<span class="badge pending">Pendente</span>';
+    return '<span class="badge pending">Em análise</span>';
   }
 
   return `<span class="badge available">${escapeHtml(normalized || "-")}</span>`;
@@ -105,42 +107,66 @@ function renderMetrics(data) {
   if (totalMetric) totalMetric.textContent = formatCurrencyFromCents(data.summary.totalPaidAmount || 0, "brl");
 }
 
-function renderGifts(gifts) {
-  if (!giftBody) return;
+function sortGifts(gifts) {
+  return [...gifts].sort((left, right) => String(left.title || "").localeCompare(String(right.title || "")));
+}
 
-  if (giftCount) {
-    giftCount.textContent = `${gifts.length} itens`;
+function renderPurchaseGifts(gifts) {
+  if (!purchaseGiftBody) return;
+
+  if (purchaseGiftCount) {
+    purchaseGiftCount.textContent = `${gifts.length} itens`;
   }
 
   if (!gifts.length) {
-    giftBody.innerHTML = `<tr><td colspan="7" style="padding:0;">${emptyState(
-      "Nenhum presente cadastrado",
-      "Assim que a lista for criada, ela aparece aqui.",
+    purchaseGiftBody.innerHTML = `<tr><td colspan="4" style="padding:0;">${emptyState(
+      "Nenhum presente de compra",
+      "Assim que a lista online for criada, ela aparece aqui.",
     )}</td></tr>`;
     return;
   }
 
-  const sortedGifts = [...gifts].sort((left, right) => {
-    if (left.type !== right.type) {
-      return left.type.localeCompare(right.type);
-    }
-
-    return String(left.title || "").localeCompare(String(right.title || ""));
-  });
-
-  giftBody.innerHTML = sortedGifts
+  purchaseGiftBody.innerHTML = sortGifts(gifts)
     .map(
       (gift) => `
         <tr>
           <td class="gift-cell" data-label="Presente">
             <span class="gift-name">${escapeHtml(gift.title)}</span>
           </td>
-          <td data-label="Tipo"><span class="gift-type">${escapeHtml(formatGiftType(gift.type))}</span></td>
+          <td data-label="Status">${giftStatusBadge(gift)}</td>
+          <td class="num" data-label="Qtde">${escapeHtml(formatGiftQuantity(gift))}</td>
+          <td class="num" data-label="Pagos">${Number(gift.paidCount || 0)}</td>
+        </tr>
+      `,
+    )
+    .join("");
+}
+
+function renderReservationGifts(gifts) {
+  if (!reservationGiftBody) return;
+
+  if (reservationGiftCount) {
+    reservationGiftCount.textContent = `${gifts.length} itens`;
+  }
+
+  if (!gifts.length) {
+    reservationGiftBody.innerHTML = `<tr><td colspan="4" style="padding:0;">${emptyState(
+      "Nenhum presente para se dispor",
+      "Assim que a lista física for criada, ela aparece aqui.",
+    )}</td></tr>`;
+    return;
+  }
+
+  reservationGiftBody.innerHTML = sortGifts(gifts)
+    .map(
+      (gift) => `
+        <tr>
+          <td class="gift-cell" data-label="Presente">
+            <span class="gift-name">${escapeHtml(gift.title)}</span>
+          </td>
           <td data-label="Status">${giftStatusBadge(gift)}</td>
           <td class="num" data-label="Qtde">${escapeHtml(formatGiftQuantity(gift))}</td>
           <td class="num" data-label="Reservados">${Number(gift.reservedCount || 0)}</td>
-          <td class="num" data-label="Pagos">${Number(gift.paidCount || 0)}</td>
-          <td class="num" data-label="Pendentes">${Number(gift.pendingCount || 0)}</td>
         </tr>
       `,
     )
@@ -266,7 +292,8 @@ async function loadCoupleDashboard() {
     }
 
     renderMetrics(data);
-    renderGifts(data.gifts || []);
+    renderPurchaseGifts((data.gifts || []).filter((gift) => gift.type === "purchase"));
+    renderReservationGifts((data.gifts || []).filter((gift) => gift.type === "reservation"));
     renderReservations(data.reservations || []);
     renderPurchases(data.purchases || []);
     renderConfirmations(data.rsvps || []);

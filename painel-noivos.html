@@ -465,29 +465,51 @@
     </div>
   </div>
 
-  <!-- ===== Gifts table ===== -->
+  <!-- ===== Gifts tables ===== -->
   <section>
     <div class="section-head">
       <div>
-        <h2>Presentes</h2>
-        <p>Visão geral da lista, com disponibilidade e andamento de cada item.</p>
+        <h2>Presentes para comprar aqui</h2>
+        <p>Itens de compra online com disponibilidade contínua e total já aprovado.</p>
       </div>
-      <span class="section-count" id="giftCount"></span>
+      <span class="section-count" id="purchaseGiftCount"></span>
     </div>
     <div class="card">
       <table>
         <thead>
           <tr>
             <th>Presente</th>
-            <th>Tipo</th>
+            <th>Status</th>
+            <th class="num">Qtde</th>
+            <th class="num">Pagos</th>
+          </tr>
+        </thead>
+        <tbody id="purchaseGiftBody">
+          <!-- preenchido via JS -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <div>
+        <h2>Presentes para se dispor</h2>
+        <p>Itens da lista física com disponibilidade restante e quem já reservou.</p>
+      </div>
+      <span class="section-count" id="reservationGiftCount"></span>
+    </div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Presente</th>
             <th>Status</th>
             <th class="num">Qtde</th>
             <th class="num">Reservados</th>
-            <th class="num">Pagos</th>
-            <th class="num">Pendentes</th>
           </tr>
         </thead>
-        <tbody id="giftBody">
+        <tbody id="reservationGiftBody">
           <!-- preenchido via JS -->
         </tbody>
       </table>
