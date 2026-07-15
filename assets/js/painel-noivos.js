@@ -6,11 +6,16 @@ const confirmationsCard = document.querySelector("#confirmationsCard");
 const statusDot = document.querySelector("#statusDot");
 const statusText = document.querySelector("#statusText");
 const reservationGiftCount = document.querySelector("#reservationGiftCount");
+const reservationToggle = document.querySelector("#reservationToggle");
 const donationCount = document.querySelector("#donationCount");
 const confirmMetric = document.querySelector("#mConfirm");
 const reservedMetric = document.querySelector("#mReserved");
 const purchasesMetric = document.querySelector("#mPurchases");
 const totalMetric = document.querySelector("#mTotal");
+
+const RESERVATION_GIFT_PREVIEW_LIMIT = 6;
+let reservationGiftsExpanded = false;
+let reservationGiftCache = [];
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -136,14 +141,31 @@ function sortGifts(gifts) {
   return [...gifts].sort((left, right) => String(left.title || "").localeCompare(String(right.title || "")));
 }
 
+function updateReservationToggle(totalItems) {
+  if (!reservationToggle) return;
+
+  const shouldShowToggle = totalItems > RESERVATION_GIFT_PREVIEW_LIMIT;
+  reservationToggle.hidden = !shouldShowToggle;
+
+  if (!shouldShowToggle) {
+    reservationToggle.textContent = "Ver mais";
+    return;
+  }
+
+  reservationToggle.textContent = reservationGiftsExpanded ? "Ver menos" : "Ver mais";
+}
+
 function renderReservationGifts(gifts) {
   if (!reservationGiftBody) return;
 
+  reservationGiftCache = sortGifts(gifts);
+  updateReservationToggle(reservationGiftCache.length);
+
   if (reservationGiftCount) {
-    reservationGiftCount.textContent = `${gifts.length} itens`;
+    reservationGiftCount.textContent = `${reservationGiftCache.length} itens`;
   }
 
-  if (!gifts.length) {
+  if (!reservationGiftCache.length) {
     reservationGiftBody.innerHTML = `<tr><td colspan="4" style="padding:0;">${emptyState(
       "Nenhum presente para se dispor",
       "Assim que a lista física for criada, ela aparece aqui.",
@@ -151,7 +173,11 @@ function renderReservationGifts(gifts) {
     return;
   }
 
-  reservationGiftBody.innerHTML = sortGifts(gifts)
+  const giftsToRender = reservationGiftsExpanded
+    ? reservationGiftCache
+    : reservationGiftCache.slice(0, RESERVATION_GIFT_PREVIEW_LIMIT);
+
+  reservationGiftBody.innerHTML = giftsToRender
     .map(
       (gift) => `
         <tr>
@@ -165,6 +191,13 @@ function renderReservationGifts(gifts) {
       `,
     )
     .join("");
+}
+
+if (reservationToggle) {
+  reservationToggle.addEventListener("click", () => {
+    reservationGiftsExpanded = !reservationGiftsExpanded;
+    renderReservationGifts(reservationGiftCache);
+  });
 }
 
 function renderReservations(list) {
