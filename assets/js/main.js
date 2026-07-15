@@ -468,8 +468,9 @@ function syncSiteAudioControls() {
   if (!siteAudioToggle || !siteAudioPlayer) return;
 
   const isPlaying = !siteAudioPlayer.paused;
-  siteAudioToggle.textContent = isPlaying ? "Pause" : "Play";
+  siteAudioToggle.textContent = isPlaying ? "❚❚" : "▶";
   siteAudioToggle.setAttribute("aria-pressed", String(isPlaying));
+  siteAudioToggle.setAttribute("aria-label", isPlaying ? "Pausar música" : "Tocar música");
 }
 
 async function playSitePlaylistTrack(trackIndex = siteAudioState.currentTrackIndex) {

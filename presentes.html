@@ -23,9 +23,9 @@
 
         <nav class="desktop-nav" aria-label="Navegação principal">
           <div class="site-audio" aria-label="Controles de música">
-            <button class="site-audio__toggle" id="site-audio-toggle" type="button" aria-pressed="false">Play</button>
+            <button class="site-audio__toggle" id="site-audio-toggle" type="button" aria-pressed="false" aria-label="Tocar música">▶</button>
             <label class="site-audio__volume" for="site-audio-volume">
-              <span class="site-audio__volume-label">Volume</span>
+              <span class="site-audio__volume-label" aria-hidden="true">🔊</span>
               <input class="site-audio__slider" id="site-audio-volume" type="range" min="0" max="100" value="8" />
             </label>
             <audio id="site-audio-player" preload="metadata"></audio>
