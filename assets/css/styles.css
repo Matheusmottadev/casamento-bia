@@ -1543,24 +1543,55 @@ button {
 
 .gift-modal__field input {
   width: 100%;
-  padding: 0.85rem 0.95rem;
-  border: 1px solid rgba(101, 112, 67, 0.18);
+  min-height: 54px;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(101, 112, 67, 0.28);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.74);
-  color: var(--text);
-  font-family: "Radon-Regular", serif;
-  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2f3620;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
 }
 
 .gift-modal__field select {
   width: 100%;
-  padding: 0.85rem 0.95rem;
-  border: 1px solid rgba(101, 112, 67, 0.18);
+  min-height: 54px;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(101, 112, 67, 0.28);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.74);
-  color: var(--text);
-  font-family: "Radon-Regular", serif;
-  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2f3620;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.gift-modal__field input::placeholder,
+.gift-modal__field select::placeholder {
+  color: rgba(72, 78, 50, 0.7);
+}
+
+.gift-modal__field input:focus,
+.gift-modal__field select:focus {
+  outline: none;
+  border-color: rgba(101, 112, 67, 0.62);
+  box-shadow: 0 0 0 4px rgba(122, 136, 81, 0.14);
+  background: #fff;
 }
 
 .gift-modal__feedback {
@@ -1672,13 +1703,33 @@ button {
 
 .rsvp-modal__field input {
   width: 100%;
-  padding: 0.85rem 0.95rem;
-  border: 1px solid rgba(101, 112, 67, 0.18);
+  min-height: 54px;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(101, 112, 67, 0.28);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.74);
-  color: var(--text);
-  font-family: "Radon-Regular", serif;
-  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2f3620;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.rsvp-modal__field input::placeholder {
+  color: rgba(72, 78, 50, 0.7);
+}
+
+.rsvp-modal__field input:focus {
+  outline: none;
+  border-color: rgba(101, 112, 67, 0.62);
+  box-shadow: 0 0 0 4px rgba(122, 136, 81, 0.14);
+  background: #fff;
 }
 
 .rsvp-modal__feedback {
