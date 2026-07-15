@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { InvalidWebhookSignatureError, WebhookSignatureValidator } from "mercadopago";
 import pg from "pg";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -814,6 +815,19 @@ async function mercadopagoRequest(pathname, options = {}) {
   return data;
 }
 
+function validateMercadoPagoWebhookSignature(request, requestUrl, payload) {
+  const secret = String(process.env.MP_WEBHOOK_SECRET || "").trim();
+
+  if (!secret) return;
+
+  WebhookSignatureValidator.validate({
+    xSignature: request.headers["x-signature"],
+    xRequestId: request.headers["x-request-id"],
+    dataId: String(payload?.data?.id || requestUrl.searchParams.get("data.id") || requestUrl.searchParams.get("id") || "").trim(),
+    secret,
+  });
+}
+
 async function ensureAppData() {
   if (pool) {
     await ensureDatabase();
@@ -981,6 +995,7 @@ const server = http.createServer(async (request, response) => {
     try {
       const rawBody = await readRequestBody(request);
       const payload = JSON.parse(rawBody || "{}");
+      validateMercadoPagoWebhookSignature(request, requestUrl, payload);
       const paymentId =
         String(payload?.data?.id || requestUrl.searchParams.get("data.id") || requestUrl.searchParams.get("id") || "").trim();
       const topic = String(payload?.type || requestUrl.searchParams.get("type") || "").trim();
@@ -1024,6 +1039,16 @@ const server = http.createServer(async (request, response) => {
 
       sendJson(response, 200, { received: true });
     } catch (error) {
+      if (error instanceof InvalidWebhookSignatureError) {
+        console.error("Assinatura invalida no webhook do Mercado Pago:", {
+          reason: error.reason,
+          requestId: error.requestId,
+          timestamp: error.timestamp,
+        });
+        sendJson(response, 401, { error: "Webhook do Mercado Pago com assinatura invalida." });
+        return;
+      }
+
       console.error("Erro ao processar webhook do Mercado Pago:", error);
       sendJson(response, 500, { error: "Nao foi possivel processar a notificacao." });
     }
