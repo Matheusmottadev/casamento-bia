@@ -39,6 +39,7 @@ const messageRotation = {
   timerId: null,
   isBoardMode: false,
 };
+const RSVP_HASH = "#confirmar-presenca";
 
 function formatNumber(value) {
   return String(value).padStart(2, "0");
@@ -389,6 +390,15 @@ function closeRsvpModal() {
   }, 220);
 }
 
+function shouldOpenRsvpFromUrl() {
+  const searchParams = new URLSearchParams(window.location.search);
+  const rsvpQuery = String(searchParams.get("rsvp") || "").trim().toLowerCase();
+  const modalQuery = String(searchParams.get("modal") || "").trim().toLowerCase();
+  const hash = String(window.location.hash || "").trim().toLowerCase();
+
+  return rsvpQuery === "1" || rsvpQuery === "true" || modalQuery === "rsvp" || hash === RSVP_HASH;
+}
+
 function updateHeaderState() {
   if (!siteHeader || !heroSection) return;
 
@@ -525,3 +535,7 @@ updateVisitorCount();
 updateHeaderState();
 loadMessages();
 syncMessageMode();
+
+if (shouldOpenRsvpFromUrl()) {
+  openRsvpModal();
+}
