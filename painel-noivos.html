@@ -255,6 +255,9 @@
     width:100%;
     border-collapse: collapse;
   }
+  .fixed-table{
+    table-layout: fixed;
+  }
   thead th{
     text-align:left;
     font-size: 11px;
@@ -539,7 +542,13 @@
       </div>
     </div>
     <div class="card">
-      <table>
+      <table class="fixed-table">
+        <colgroup>
+          <col style="width: 38%">
+          <col style="width: 22%">
+          <col style="width: 18%">
+          <col style="width: 22%">
+        </colgroup>
         <thead>
           <tr>
             <th>Presente</th>
