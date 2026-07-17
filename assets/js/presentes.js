@@ -51,6 +51,12 @@ if (purchaseGrid && reservationGrid) {
       price: "R$ 129,90",
     },
     {
+      id: "bridal-rolling-pin",
+      image: "./assets/images/gifts/purchase/bridal-rolling-pin-real.webp",
+      title: "Rolo de macarrao pra noiva utilizar quando necessario",
+      price: "R$ 89,90",
+    },
+    {
       id: "broken-couple-fund",
       image: "./assets/images/gifts/purchase/broken-couple-fund-user.webp",
       title: "Vaquinha para ajudar os noivos quebrados",
@@ -181,12 +187,6 @@ if (purchaseGrid && reservationGrid) {
       image: "./assets/images/gifts/purchase/mega-ac-user.webp",
       title: "Ar-condicionado poderoso para esfriar o clima antes da primeira briguinha",
       price: "R$ 2.149,90",
-    },
-    {
-      id: "bridal-rolling-pin",
-      image: "./assets/images/gifts/purchase/bridal-rolling-pin-real.webp",
-      title: "Rolo de macarrao pra noiva utilizar quando necessario",
-      price: "R$ 89,90",
     },
     {
       id: "bride-alarm",

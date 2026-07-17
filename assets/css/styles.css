@@ -2184,8 +2184,8 @@ button {
 }
 
 .gift-card__badge--sold-out {
-  background: rgba(102, 101, 98, 0.12);
-  color: #5e5a54;
+  background: rgba(111, 137, 78, 0.14);
+  color: #59723a;
 }
 
 .gift-card__button[disabled] {
